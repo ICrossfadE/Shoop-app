@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic';
 
 // All filters are applied in Postgres, including every selected tag (AND).
 export default async function Home({ searchParams }: { searchParams: Promise<{ category?: string; tag?: string | string[] }> }) {
-  const { supabase, workspace, email } = await requireWorkspace();
+  const { supabase, workspace, email, account } = await requireWorkspace();
   const { category, tag } = await searchParams;
   const selectedTags = readTagFilter(tag);
-  const [categoryResult, tagResult] = await Promise.all([
+  const [categoryResult, tagResult, authorResult] = await Promise.all([
     supabase.from('categories').select('*').eq('workspace_id', workspace.workspace_id).order('created_at').order('id'),
     supabase.from('tags').select('*').eq('workspace_id', workspace.workspace_id).order('name').order('id'),
+    supabase.rpc('workspace_product_authors', { p_workspace_id: workspace.workspace_id }),
   ]);
   const categories = categoryResult.data ?? [];
   const tags = tagResult.data ?? [];
@@ -22,8 +23,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
     ? await supabase.rpc('filtered_products', { p_workspace_id: workspace.workspace_id, p_category_id: selected, p_tag_ids: selectedTags ?? [] })
     : { data: [], error: null };
   const loadError = invalidTags ? 'Один із тегів недоступний. Скиньте фільтр і виберіть теги знову.'
-    : categoryResult.error || tagResult.error || result.error ? 'Не вдалося завантажити категорії, теги або продукти. Оновіть список.' : null;
+    : categoryResult.error || tagResult.error || result.error || authorResult.error ? 'Не вдалося завантажити дані. Спробуйте знову.' : null;
   return <ProductList workspaceId={workspace.workspace_id} workspaceName={workspace.workspace_name}
     categories={categories} tags={tags} selectedTags={selectedTags ?? []} selectedCategory={selected}
-    products={result.data ?? []} loadError={loadError} role={workspace.member_role} email={email} />;
+    products={result.data ?? []} authors={authorResult.data ?? []} account={account} loadError={loadError} role={workspace.member_role} email={email} />;
 }

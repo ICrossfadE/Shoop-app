@@ -1,4 +1,4 @@
--- Run the WHOLE file AFTER migrations 003 and 004. All fixture data is rolled back.
+-- Run the WHOLE file AFTER ALL current migrations. All fixture data is rolled back.
 begin;
 insert into auth.users(id, email) values
 ('b8bc6ee0-9ddb-456a-8f41-637ec271c001', 'shopik-categories-a@example.invalid'),
@@ -29,7 +29,7 @@ select set_config('shopik.test_category_a', (select id::text from public.categor
 insert into public.products(workspace_id, category_id, name, price)
 values(current_setting('shopik.test_workspace_a')::uuid, current_setting('shopik.test_category_a')::uuid, 'Молоко', 50);
 
--- Completion is idempotent, edits preserve snapshots, reactivation/deletion remove expenses.
+-- Completion is idempotent and final; deletion removes its expense.
 do $$
 declare pid text;
 begin
@@ -41,13 +41,16 @@ begin
   update public.products set status = 'completed' where id = pid;
   update public.products set status = 'completed' where id = pid;
   if (select count(*) from public.expenses where product_id = pid) <> 1 then raise exception 'Completion duplicated or lost'; end if;
-  update public.products set price = 70, name = 'Молоко нове' where id = pid;
+  begin
+    update public.products set price = 70, name = 'Молоко нове' where id = pid;
+    raise exception 'Completed edit allowed';
+  exception when check_violation then null; end;
   update public.categories set name = 'Продукти' where id = current_setting('shopik.test_category_a')::uuid;
   if not exists(select 1 from public.expenses where product_id = pid and amount = 50 and name = 'Молоко' and category_name = 'Їжа') then raise exception 'Snapshot mutated'; end if;
-  update public.products set status = 'active' where id = pid;
-  if exists(select 1 from public.expenses where product_id = pid) then raise exception 'Reactivation kept expense'; end if;
-  update public.products set status = 'completed' where id = pid;
-  if not exists(select 1 from public.expenses where product_id = pid and amount = 70 and category_name = 'Продукти') then raise exception 'Recompletion missing new snapshot'; end if;
+  begin
+    update public.products set status = 'active' where id = pid;
+    raise exception 'Reactivation allowed';
+  exception when check_violation then null; end;
   delete from public.products where id = pid;
   if exists(select 1 from public.expenses where product_id = pid) then raise exception 'Delete kept expense'; end if;
   insert into public.products(workspace_id, category_id, name, price)

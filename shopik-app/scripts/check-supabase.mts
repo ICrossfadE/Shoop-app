@@ -45,6 +45,7 @@ assert.ok([401, 403].includes(deniedSummary.status), 'Anonymous expense aggregat
 console.log('PASS: expense aggregation rejects anonymous execution.');
 // New tag RPCs must also be present and inaccessible to the anonymous role.
 for (const [rpc, body] of [
+  ['workspace_product_authors', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099' }],
   ['filtered_products', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_category_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_tag_ids: [] }],
   ['expense_month_tags', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_month: '2026-10-01', p_tag_ids: [] }],
   ['save_product_tags', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_product_id: null, p_name: 'Rejected test', p_description: '', p_price: 0, p_category_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_tag_ids: [] }],

@@ -1,5 +1,7 @@
 # Supabase: перший запуск
 
+Етап 006: застосувати тільки `supabase/migrations/202610290006_logic_ui.sql`, потім виконати весь `supabase/tests/logic_ui.sql`. Очікується `PASS: final completion, active lists, immutable tags, scoped authors and deletion`. Попередні міграції не повторювати. Завершені покупки приховані з категорій і не повертаються в активні; створення/збереження та видалення витрат залишаються атомарними.
+
 ## Локальні параметри
 
 У `shopik-app/.env.local` додайте:

@@ -1,4 +1,4 @@
--- Run the WHOLE file after migration 202610290005_tags.sql. Fixtures roll back.
+-- Run the WHOLE file after ALL current migrations. Fixtures roll back.
 begin;
 insert into auth.users(id, email) values
 ('b8bc6ee0-9ddb-456a-8f41-637ec271d001', 'shopik-tags-a@example.invalid'),
@@ -22,9 +22,9 @@ select set_config('shopik.tag_product_b', public.save_product_tags(current_setti
   'Хліб', '', 50, current_setting('shopik.tags_category_a')::uuid, array[current_setting('shopik.tag_one')::uuid]), true);
 select set_config('shopik.tag_product_c', public.save_product_tags(current_setting('shopik.tags_workspace_a')::uuid, null,
   'Без тегів', '', 25, current_setting('shopik.tags_category_a')::uuid, '{}'::uuid[]), true);
-update public.products set status = 'completed';
+
 reset role;
-update public.expenses set occurred_at = '2026-10-15 12:00:00+00' where workspace_id = current_setting('shopik.tags_workspace_a')::uuid;
+
 
 -- Inject a failure AFTER product UPDATE, during link insertion, to prove rollback.
 create function public.shopik_test_tag_link_failure() returns trigger language plpgsql as $$
@@ -46,12 +46,7 @@ begin
   if jsonb_array_length(public.filtered_products(wid, cid, '{}')) <> 3 then raise exception 'No-filter omitted untagged product'; end if;
   if jsonb_array_length(public.filtered_products(wid, cid, array[t1])) <> 2 then raise exception 'Single tag filter failed'; end if;
   if jsonb_array_length(public.filtered_products(wid, cid, array[t1,t2])) <> 1 then raise exception 'AND tag filter failed'; end if;
-  result := public.expense_month_tags(wid, '2026-10-01', array[t1]);
-  if (result->>'total')::numeric <> 100 or jsonb_array_length(result->'items') <> 2
-    or (result->'categories'->0->>'total')::numeric <> 100 then raise exception 'Filtered totals duplicated/lost purchases'; end if;
-  if (public.expense_month_tags(wid, '2026-10-01', array[t1,t2])->>'total')::numeric <> 50 then raise exception 'AND expense filter failed'; end if;
-  if (public.expense_month(wid, '2026-10-01')->>'total')::numeric <> 125 then raise exception 'Old unfiltered RPC regressed'; end if;
-  if (public.expense_month_tags(wid, '2026-11-01', array[t1])->>'total')::numeric <> 0 then raise exception 'Filter escaped month'; end if;
+
   begin
     insert into public.tags(workspace_id, name, color) values(wid, 'щотижня', '#000000');
     raise exception 'Duplicate name accepted';
@@ -72,11 +67,37 @@ begin
   perform set_config('shopik.test_fail_link', 'no', true);
   if not exists(select 1 from public.products where id = pid and name = 'Молоко' and price = 50)
     or (select count(*) from public.product_tags where product_id = pid) <> 2 then raise exception 'Atomic save rolled back only part of product'; end if;
-  -- Current tags change filtering, but the historical amount remains 50.
-  perform public.save_product_tags(wid, pid, 'Молоко', '', 99, cid, '{}');
-  if (public.expense_month_tags(wid, '2026-10-01', array[t1])->>'total')::numeric <> 50 then raise exception 'Current tags not used'; end if;
+  -- Active products can still change their tag set.
+  perform public.save_product_tags(wid, pid, 'Молоко', '', 50, cid, '{}');
+  if jsonb_array_length(public.filtered_products(wid, cid, array[t1])) <> 1 then raise exception 'Active tags not updated'; end if;
+  perform public.save_product_tags(wid, pid, 'Молоко', '', 50, cid, array[t1,t2]);
+end;
+$$;
+
+-- Complete only after active editing/filter tests; completed rows are now final.
+reset role;
+update public.products set status = 'completed' where workspace_id = current_setting('shopik.tags_workspace_a')::uuid;
+update public.expenses set occurred_at = '2026-10-15 12:00:00+00' where workspace_id = current_setting('shopik.tags_workspace_a')::uuid;
+set local role authenticated;
+do $$
+declare wid uuid := current_setting('shopik.tags_workspace_a')::uuid;
+  cid uuid := current_setting('shopik.tags_category_a')::uuid;
+  t1 uuid := current_setting('shopik.tag_one')::uuid;
+  t2 uuid := current_setting('shopik.tag_two')::uuid;
+  pid text := current_setting('shopik.tag_product_a'); result jsonb;
+begin
+  if jsonb_array_length(public.filtered_products(wid, cid, '{}')) <> 0 then raise exception 'Completed products visible in category'; end if;
+  result := public.expense_month_tags(wid, '2026-10-01', array[t1]);
+  if (result->>'total')::numeric <> 100 or jsonb_array_length(result->'items') <> 2
+    or (result->'categories'->0->>'total')::numeric <> 100 then raise exception 'Filtered totals duplicated/lost purchases'; end if;
+  if (public.expense_month_tags(wid, '2026-10-01', array[t1,t2])->>'total')::numeric <> 50 then raise exception 'AND expense filter failed'; end if;
+  if (public.expense_month(wid, '2026-10-01')->>'total')::numeric <> 125 then raise exception 'Old unfiltered RPC regressed'; end if;
+  if (public.expense_month_tags(wid, '2026-11-01', array[t1])->>'total')::numeric <> 0 then raise exception 'Filter escaped month'; end if;
+  begin
+    perform public.save_product_tags(wid, pid, 'Молоко', '', 99, cid, '{}');
+    raise exception 'Completed edit accepted';
+  exception when check_violation then null; end;
   if not exists(select 1 from public.expenses where product_id = pid and amount = 50) then raise exception 'Historical amount changed'; end if;
-  perform public.save_product_tags(wid, pid, 'Молоко', '', 99, cid, array[t1,t2]);
   delete from public.products where id = pid;
   if (select count(*) from public.tags) <> 2 or exists(select 1 from public.product_tags where product_id = pid)
     or not exists(select 1 from public.product_tags where product_id = current_setting('shopik.tag_product_b')) then raise exception 'Product deletion removed shared tags'; end if;

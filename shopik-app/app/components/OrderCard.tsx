@@ -1,14 +1,17 @@
 import type { TaggedProduct } from '@/lib/tags';
 import TagBadge from './TagBadge';
+import AuthorInfo from './AuthorInfo';
+import type { ProductAuthor } from '@/lib/identity';
 
 type Props = {
   product: TaggedProduct; pending: boolean;
+  author?: ProductAuthor;
   onEdit: (trigger: HTMLElement) => void; onStatus: () => void; onDelete: () => void;
 };
 const money = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' });
 
 // Present one persisted product and its explicit edit, completion and delete actions.
-export default function OrderCard({ product, pending, onEdit, onStatus, onDelete }: Props) {
+export default function OrderCard({ product, author, pending, onEdit, onStatus, onDelete }: Props) {
   const completed = product.status === 'completed';
   return (
     <article className="space-y-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
@@ -22,10 +25,11 @@ export default function OrderCard({ product, pending, onEdit, onStatus, onDelete
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
       <div className="flex flex-wrap gap-2">
-        <button disabled={pending} onClick={onStatus} className="rounded bg-green-700 px-3 py-2 text-white disabled:opacity-50">{completed ? 'Повернути в активні' : 'Завершити'}</button>
-        <button disabled={pending} onClick={(event) => onEdit(event.currentTarget)} className="rounded border border-zinc-400 px-3 py-2 disabled:opacity-50">Редагувати</button>
+        {!completed && <button disabled={pending} onClick={onStatus} className="rounded bg-green-700 px-3 py-2 text-white disabled:opacity-50">Завершити</button>}
+        {!completed && <button disabled={pending} onClick={(event) => onEdit(event.currentTarget)} className="rounded border border-zinc-400 px-3 py-2 disabled:opacity-50">Редагувати</button>}
         <button disabled={pending} onClick={onDelete} className="rounded border border-red-400 px-3 py-2 text-red-700 disabled:opacity-50">Видалити</button>
       </div>
+      <AuthorInfo author={author} createdAt={product.created_at} />
     </article>
   );
 }

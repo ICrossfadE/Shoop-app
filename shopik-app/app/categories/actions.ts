@@ -28,7 +28,7 @@ export async function deleteCategory(workspaceId: string, id: string): Promise<P
     const client = await workspaceClient(workspaceId);
     if (!client) return { ok: false, error: 'Немає доступу. Оновіть сторінку.' };
     const { data, error } = await client.from('categories').delete().eq('id', id).eq('workspace_id', workspaceId).select('id').maybeSingle();
-    if (error || !data) return { ok: false, error: error?.code === '23503' ? 'Не можна видалити категорію, яка містить продукти.' : 'Не вдалося видалити категорію. Оновіть список.' };
+    if (error || !data) return { ok: false, error: error?.code === '23503' ? 'Категорія містить активні або завершені продукти. Завершені покупки можна видалити на сторінці витрат.' : 'Не вдалося видалити категорію. Спробуйте знову.' };
   } catch { return { ok: false, error: 'Немає з’єднання. Спробуйте знову.' }; }
   revalidatePath('/');
   return { ok: true };

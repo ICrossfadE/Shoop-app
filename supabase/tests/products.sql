@@ -17,8 +17,8 @@ declare product_id text; affected integer;
 begin
   select id into strict product_id from public.products where created_by = auth.uid();
   if product_id !~ '^[0-9a-f]{64}$' then raise exception 'Invalid SHA256 ID'; end if;
-  update public.products set name = 'Оновлений продукт', price = 0, status = 'completed' where id = product_id;
-  if not exists(select 1 from public.products where id = product_id and name = 'Оновлений продукт' and price = 0 and status = 'completed' and currency = 'UAH') then
+  update public.products set name = 'Оновлений продукт', price = 0 where id = product_id;
+  if not exists(select 1 from public.products where id = product_id and name = 'Оновлений продукт' and price = 0 and status = 'active' and currency = 'UAH') then
     raise exception 'Product update failed';
   end if;
   update public.products set status = 'active' where id = product_id;

@@ -2,8 +2,9 @@ import type { Product } from '../products';
 import type { Category } from '../categories';
 import type { Expense, ExpenseMonth } from '../expenses';
 import type { Tag, TaggedProduct } from '../tags';
+import type { ProductAuthor } from '../identity';
 // Keep in sync with the versioned SQL migrations.
-type Profile = { id: string; display_name: string; created_at: string };
+type Profile = { id: string; display_name: string; avatar_url: string; created_at: string };
 type Workspace = {
   id: string;
   name: string;
@@ -37,6 +38,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      workspace_product_authors: { Args: { p_workspace_id: string }; Returns: ProductAuthor[] };
       save_product_tags: { Args: { p_workspace_id: string; p_product_id: string | null; p_name: string; p_description: string; p_price: number; p_category_id: string; p_tag_ids: string[] }; Returns: string };
       filtered_products: { Args: { p_workspace_id: string; p_category_id: string; p_tag_ids: string[] }; Returns: TaggedProduct[] };
       expense_month_tags: { Args: { p_workspace_id: string; p_month: string; p_tag_ids: string[] }; Returns: ExpenseMonth };
