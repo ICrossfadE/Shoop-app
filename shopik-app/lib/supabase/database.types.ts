@@ -1,4 +1,6 @@
 import type { Product } from '../products';
+import type { Category } from '../categories';
+import type { Expense, ExpenseMonth } from '../expenses';
 // Keep in sync with the versioned SQL migrations.
 type Profile = { id: string; display_name: string; created_at: string };
 type Workspace = {
@@ -18,10 +20,12 @@ type Membership = {
 export type Database = {
   public: {
     Tables: {
+      expenses: { Row: Expense; Insert: never; Update: never; Relationships: [] };
+      categories: { Row: Category; Insert: Pick<Category, 'workspace_id' | 'name'>; Update: Pick<Category, 'name'>; Relationships: [] };
       products: {
         Row: Product;
-        Insert: Pick<Product, 'workspace_id' | 'name' | 'price'> & Partial<Pick<Product, 'description'>>;
-        Update: Partial<Pick<Product, 'name' | 'description' | 'price' | 'status'>>;
+        Insert: Pick<Product, 'workspace_id' | 'name' | 'price' | 'category_id'> & Partial<Pick<Product, 'description'>>;
+        Update: Partial<Pick<Product, 'name' | 'description' | 'price' | 'status' | 'category_id'>>;
         Relationships: [];
       };
       profiles: { Row: Profile; Insert: Profile; Update: Partial<Pick<Profile, 'display_name'>>; Relationships: [] };
@@ -30,6 +34,7 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      expense_month: { Args: { p_workspace_id: string; p_month: string }; Returns: ExpenseMonth };
       ensure_personal_workspace: {
         Args: Record<string, never>;
         Returns: { workspace_id: string; workspace_name: string; member_role: 'owner' | 'member' }[];

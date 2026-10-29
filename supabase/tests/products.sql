@@ -1,4 +1,4 @@
--- Run this WHOLE file after migration 202610290002_products.sql.
+-- Run this WHOLE file after ALL current migrations.
 -- Fixture users and products are rolled back, including on a test failure.
 begin;
 insert into auth.users(id, email) values
@@ -8,8 +8,8 @@ insert into auth.users(id, email) values
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"b8bc6ee0-9ddb-456a-8f41-637ec271b001","role":"authenticated"}', true);
 select * from public.ensure_personal_workspace();
-insert into public.products(workspace_id, name, description, price)
-  select id, 'Тестовий продукт', '', 12.50 from public.workspaces where owner_id = auth.uid() and is_personal;
+insert into public.products(workspace_id, category_id, name, description, price)
+  select id, (select id from public.categories where workspace_id = public.workspaces.id limit 1), 'Тестовий продукт', '', 12.50 from public.workspaces where owner_id = auth.uid() and is_personal;
 
 -- Owner CRUD, SHA256 format, immutable ownership and monetary constraints.
 do $$
@@ -42,8 +42,8 @@ begin
     update public.products set created_by = 'b8bc6ee0-9ddb-456a-8f41-637ec271b002' where id = product_id;
     raise exception 'Author spoofing allowed';
   exception when insufficient_privilege then null; end;
-  insert into public.products(workspace_id, name, price)
-    select workspace_id, 'Видалити', 1 from public.products where id = product_id;
+  insert into public.products(workspace_id, category_id, name, price)
+    select workspace_id, category_id, 'Видалити', 1 from public.products where id = product_id;
   delete from public.products where created_by = auth.uid() and name = 'Видалити';
   get diagnostics affected = row_count;
   if affected <> 1 then raise exception 'Own delete failed'; end if;
@@ -51,6 +51,7 @@ end;
 $$;
 
 -- Retain the first user's Workspace ID for explicit cross-workspace attacks.
+select set_config('shopik.test_category_a', (select id::text from public.categories limit 1), true);
 select set_config('shopik.test_workspace_a', (select id::text from public.workspaces where owner_id = auth.uid() and is_personal), true);
 select set_config('request.jwt.claims', '{"sub":"b8bc6ee0-9ddb-456a-8f41-637ec271b002","role":"authenticated"}', true);
 select * from public.ensure_personal_workspace();
@@ -65,7 +66,7 @@ begin
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'Cross-workspace delete allowed'; end if;
   begin
-    insert into public.products(workspace_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, 'Атака', 1);
+    insert into public.products(workspace_id, category_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, current_setting('shopik.test_category_a')::uuid, 'Атака', 1);
     raise exception 'Cross-workspace insert allowed';
   exception when insufficient_privilege then null; end;
 end;
@@ -83,7 +84,7 @@ begin
   update public.products set status = 'completed' where name = 'Оновлений продукт';
   get diagnostics affected = row_count;
   if affected <> 1 then raise exception 'Member status update denied'; end if;
-  insert into public.products(workspace_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, 'Продукт учасника', 1);
+  insert into public.products(workspace_id, category_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, current_setting('shopik.test_category_a')::uuid, 'Продукт учасника', 1);
   if not exists(select 1 from public.products where name = 'Продукт учасника' and created_by = auth.uid()) then raise exception 'Member author missing'; end if;
 end;
 $$;
@@ -96,7 +97,7 @@ begin
     raise exception 'Anonymous product read allowed';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.products(workspace_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, 'Атака', 1);
+    insert into public.products(workspace_id, category_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, current_setting('shopik.test_category_a')::uuid, 'Атака', 1);
     raise exception 'Anonymous product insert allowed';
   exception when insufficient_privilege then null; end;
 end;

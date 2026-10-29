@@ -27,7 +27,7 @@ async function assertLoginRedirect(response: Response) {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.ok(/<meta[^>]*http-equiv="refresh"[^>]*content="[01];url=\/login"/.test(html), 'Streamed response must redirect to login');
-  assert.ok(!/id="workspace-heading"|aria-label="Продукти"/.test(html), 'Unauthenticated response must not include Workspace HTML');
+  assert.ok(!/id="workspace-heading"|aria-label="Продукти"|id="expense-categories"/.test(html), 'Unauthenticated response must not include Workspace HTML');
 }
 
 try {
@@ -46,6 +46,8 @@ try {
 
   const home = await fetch(`${origin}/`, { redirect: 'manual' });
   await assertLoginRedirect(home);
+  const expenses = await fetch(`${origin}/expenses`, { redirect: 'manual' });
+  await assertLoginRedirect(expenses);
 
   const login = await fetch(`${origin}/login`);
   assert.equal(login.status, 200);
@@ -78,12 +80,14 @@ try {
   const projectRef = new URL(supabaseConfig.url).hostname.split('.')[0];
   const cookieName = `sb-${projectRef}-auth-token`;
   for (const cookieValue of ['base64-invalid', `base64-${encode(forgedSession)}`]) {
-    const denied = await fetch(`${origin}/`, {
-      redirect: 'manual',
-      headers: { Cookie: `${cookieName}=${cookieValue}` },
-      signal: AbortSignal.timeout(20000),
-    });
-    await assertLoginRedirect(denied);
+    for (const path of ['/', '/expenses']) {
+      const denied = await fetch(`${origin}${path}`, {
+        redirect: 'manual',
+        headers: { Cookie: `${cookieName}=${cookieValue}` },
+        signal: AbortSignal.timeout(20000),
+      });
+      await assertLoginRedirect(denied);
+    }
   }
   console.log('PASS: protected root, login, invalid OAuth code, OAuth cancellation, open redirect rejection, no-store headers, damaged and forged session cookies.');
 } finally {

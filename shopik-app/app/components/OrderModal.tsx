@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { saveProduct } from '@/app/products/actions';
 import { validateProduct, type Product, type ProductErrors } from '@/lib/products';
+import type { Category } from '@/lib/categories';
 
-type Props = { workspaceId: string; product: Product | null; onClose: () => void; onSaved: () => void };
+type Props = { workspaceId: string; product: Product | null; categories: Category[]; selectedCategory: string; onClose: () => void; onSaved: () => void };
 
 // Native dialog handles focus trapping, background inertness and keyboard navigation.
-export default function OrderModal({ workspaceId, product, onClose, onSaved }: Props) {
+export default function OrderModal({ workspaceId, product, categories, selectedCategory, onClose, onSaved }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const submitting = useRef(false);
   const [name, setName] = useState(product?.name ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [price, setPrice] = useState(product ? String(product.price) : '0');
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? selectedCategory);
   const [fields, setFields] = useState<ProductErrors>({});
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -30,7 +32,7 @@ export default function OrderModal({ workspaceId, product, onClose, onSaved }: P
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
-    const input = { name, description, price };
+    const input = { name, description, price, category_id: categoryId };
     const validation = validateProduct(input);
     setError('');
     if (!validation.ok) { setFields(validation.fields); return; }
@@ -60,6 +62,15 @@ export default function OrderModal({ workspaceId, product, onClose, onSaved }: P
       <p id="product-dialog-description" className="mt-2 text-sm text-zinc-600">Ціна у гривнях. Опис можна залишити порожнім.</p>
       <form onSubmit={submit} noValidate className="mt-5 space-y-4" aria-busy={pending}>
         <fieldset disabled={pending} className="space-y-4 disabled:opacity-60">
+          {/* Mandatory category is also checked by the Workspace-scoped foreign key. */}
+          <div>
+            <label htmlFor="product-category" className="block font-medium">Категорія</label>
+            <select id="product-category" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} aria-invalid={!!fields.category_id} aria-describedby={fields.category_id ? 'category-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2">
+              <option value="">Виберіть категорію</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+            {fields.category_id && <p id="category-error" className="mt-1 text-sm text-red-700">{fields.category_id}</p>}
+          </div>
           <div>
             <label htmlFor="product-name" className="block font-medium">Назва</label>
             <input autoFocus id="product-name" name="name" required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} aria-invalid={!!fields.name} aria-describedby={fields.name ? 'name-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2" />

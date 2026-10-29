@@ -22,7 +22,7 @@ assert.equal(auth.status, 200, 'Supabase Auth must accept the public key');
 assert.equal(auth.body.external?.google, true, 'Google provider must be enabled');
 console.log('PASS: Supabase connection and Google provider.');
 
-for (const table of ['profiles', 'workspaces', 'workspace_members', 'products']) {
+for (const table of ['profiles', 'workspaces', 'workspace_members', 'products', 'categories', 'expenses']) {
   const result = await request(`/rest/v1/${table}?select=*&limit=1`);
   assert.notEqual(result.status, 404, `${table} must exist in the API schema`);
   const denied = [401, 403].includes(result.status) && result.body.code === '42501';
@@ -35,4 +35,12 @@ const bootstrap = await request('/rest/v1/rpc/ensure_personal_workspace', 'POST'
 assert.ok([401, 403].includes(bootstrap.status), 'Anonymous Workspace bootstrap must be denied');
 assert.equal(bootstrap.body.code, '42501', 'Bootstrap RPC must exist and reject execution privileges');
 console.log('PASS: Workspace RPC exists and rejects anonymous execution.');
+// Supply the correct signature to distinguish missing RPC from denied execution.
+const deniedSummary = await fetch(config.url + '/rest/v1/rpc/expense_month', {
+  method: 'POST', headers: { apikey: config.key, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_month: '2026-10-01' }),
+  signal: AbortSignal.timeout(15000),
+});
+assert.ok([401, 403].includes(deniedSummary.status), 'Anonymous expense aggregation must be denied');
+console.log('PASS: expense aggregation rejects anonymous execution.');
 console.log('NOT TESTED: two-user RLS, duplicate Workspaces, authenticated session refresh and logout.');

@@ -72,7 +72,9 @@ npm run dev
 ## Межі цього етапу
 
 Підключені Google Login, cookie-сесії, logout та особистий Workspace.
-Продукти перенесені в окремий етап: `docs/tasks/002-products.md`. Для них застосовується нова міграція `202610290002_products.sql`; JSON видалений без імпорту старих записів.
+Продукти перенесені в окремий етап: `docs/tasks/003-products.md`. Для них застосовується міграція `202610290002_products.sql`; JSON видалений без імпорту старих записів.
+
+Категорії та витрати: `docs/tasks/004-categories.md`. Послідовно виконати лише нові міграції `202610290003_categories.sql`, потім `202610290004_expenses.sql`. Після цього запустити весь `supabase/tests/categories_expenses.sql`; очікується `PASS: categories, expense lifecycle, Kyiv months and RLS`. Старі міграції не повторювати. `test:supabase` тепер також перевіряє categories, expenses та заборону анонімного виклику місячної статистики.
 Запрошення, перемикання Workspace та редагування ролей — наступні етапи.
 Паролі не отримуються й не зберігаються Shopik: використовується тільки Google OAuth.
 

@@ -1,19 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
-import { isProductId, isWorkspaceId, validateProduct, type ProductFields, type ProductResult } from '@/lib/products';
-
-// Recheck identity and membership for every mutation; RLS also enforces access.
-async function productContext(workspaceId: string) {
-  if (!isWorkspaceId(workspaceId)) return null;
-  const supabase = await createClient(true);
-  const { data, error } = await supabase.auth.getClaims();
-  if (error || !data?.claims.sub) return null;
-  const { data: membership, error: memberError } = await supabase.from('workspace_members')
-    .select('role').eq('workspace_id', workspaceId).eq('user_id', data.claims.sub).maybeSingle();
-  return !memberError && membership ? supabase : null;
-}
+import { workspaceClient as productContext } from '@/lib/workspace';
+import { isProductId, validateProduct, type ProductFields, type ProductResult } from '@/lib/products';
 
 // Save only editable fields. Author, SHA256 ID and timestamps come from Postgres.
 export async function saveProduct(workspaceId: string, productId: string | null, input: ProductFields): Promise<ProductResult> {
@@ -27,11 +16,12 @@ export async function saveProduct(workspaceId: string, productId: string | null,
       ? supabase.from('products').insert({ ...parsed.value, workspace_id: workspaceId })
       : supabase.from('products').update(parsed.value).eq('id', productId).eq('workspace_id', workspaceId);
     const { data, error } = await query.select('id').maybeSingle();
-    if (error || !data) return { ok: false, error: 'Не вдалося зберегти продукт. Оновіть список і спробуйте знову.' };
+    if (error || !data) return { ok: false, error: error?.code === '23503' ? 'Категорія недоступна. Оновіть список і виберіть іншу.' : 'Не вдалося зберегти продукт. Оновіть список і спробуйте знову.' };
   } catch {
     return { ok: false, error: 'Немає з’єднання. Введені дані залишились у формі.' };
   }
   revalidatePath('/');
+  revalidatePath('/expenses');
   return { ok: true };
 }
 
@@ -48,6 +38,7 @@ export async function setProductStatus(workspaceId: string, productId: string, s
     return { ok: false, error: 'Не вдалося підключитися. Спробуйте знову.' };
   }
   revalidatePath('/');
+  revalidatePath('/expenses');
   return { ok: true };
 }
 
@@ -64,5 +55,6 @@ export async function deleteProduct(workspaceId: string, productId: string): Pro
     return { ok: false, error: 'Не вдалося видалити продукт. Спробуйте знову.' };
   }
   revalidatePath('/');
+  revalidatePath('/expenses');
   return { ok: true };
 }
