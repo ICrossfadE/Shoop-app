@@ -27,7 +27,7 @@ async function assertLoginRedirect(response: Response) {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.ok(/<meta[^>]*http-equiv="refresh"[^>]*content="[01];url=\/login"/.test(html), 'Streamed response must redirect to login');
-  assert.ok(!/id="workspace-heading"|aria-label="Продукти"|id="expense-categories"/.test(html), 'Unauthenticated response must not include Workspace HTML');
+  assert.ok(!/id="workspace-heading"|aria-label="Продукти"|id="expense-categories"|id="workspace-tags"/.test(html), 'Unauthenticated response must not include Workspace HTML');
 }
 
 try {
@@ -48,6 +48,8 @@ try {
   await assertLoginRedirect(home);
   const expenses = await fetch(`${origin}/expenses`, { redirect: 'manual' });
   await assertLoginRedirect(expenses);
+  const tags = await fetch(`${origin}/tags`, { redirect: 'manual' });
+  await assertLoginRedirect(tags);
 
   const login = await fetch(`${origin}/login`);
   assert.equal(login.status, 200);
@@ -80,7 +82,7 @@ try {
   const projectRef = new URL(supabaseConfig.url).hostname.split('.')[0];
   const cookieName = `sb-${projectRef}-auth-token`;
   for (const cookieValue of ['base64-invalid', `base64-${encode(forgedSession)}`]) {
-    for (const path of ['/', '/expenses']) {
+    for (const path of ['/', '/expenses', '/tags']) {
       const denied = await fetch(`${origin}${path}`, {
         redirect: 'manual',
         headers: { Cookie: `${cookieName}=${cookieValue}` },

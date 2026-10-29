@@ -22,7 +22,7 @@ assert.equal(auth.status, 200, 'Supabase Auth must accept the public key');
 assert.equal(auth.body.external?.google, true, 'Google provider must be enabled');
 console.log('PASS: Supabase connection and Google provider.');
 
-for (const table of ['profiles', 'workspaces', 'workspace_members', 'products', 'categories', 'expenses']) {
+for (const table of ['profiles', 'workspaces', 'workspace_members', 'products', 'categories', 'expenses', 'tags', 'product_tags']) {
   const result = await request(`/rest/v1/${table}?select=*&limit=1`);
   assert.notEqual(result.status, 404, `${table} must exist in the API schema`);
   const denied = [401, 403].includes(result.status) && result.body.code === '42501';
@@ -43,4 +43,14 @@ const deniedSummary = await fetch(config.url + '/rest/v1/rpc/expense_month', {
 });
 assert.ok([401, 403].includes(deniedSummary.status), 'Anonymous expense aggregation must be denied');
 console.log('PASS: expense aggregation rejects anonymous execution.');
+// New tag RPCs must also be present and inaccessible to the anonymous role.
+for (const [rpc, body] of [
+  ['filtered_products', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_category_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_tag_ids: [] }],
+  ['expense_month_tags', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_month: '2026-10-01', p_tag_ids: [] }],
+  ['save_product_tags', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_product_id: null, p_name: 'Rejected test', p_description: '', p_price: 0, p_category_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_tag_ids: [] }],
+] as const) {
+  const response = await fetch(config.url + `/rest/v1/rpc/${rpc}`, { method: 'POST', headers: { apikey: config.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+  assert.ok([401, 403].includes(response.status), `Anonymous access to ${rpc} must be denied`);
+  console.log(`PASS: ${rpc} rejects anonymous execution.`);
+}
 console.log('NOT TESTED: two-user RLS, duplicate Workspaces, authenticated session refresh and logout.');

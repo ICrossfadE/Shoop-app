@@ -1,7 +1,8 @@
-import type { Product } from '@/lib/products';
+import type { TaggedProduct } from '@/lib/tags';
+import TagBadge from './TagBadge';
 
 type Props = {
-  product: Product; pending: boolean;
+  product: TaggedProduct; pending: boolean;
   onEdit: (trigger: HTMLElement) => void; onStatus: () => void; onDelete: () => void;
 };
 const money = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' });
@@ -17,6 +18,7 @@ export default function OrderCard({ product, pending, onEdit, onStatus, onDelete
         {product.description && <p className="whitespace-pre-wrap text-zinc-600">{product.description}</p>}
         <p className="font-semibold">{money.format(product.price)}</p>
         <p className="text-sm text-zinc-600">{completed ? 'Завершено' : 'Активний'}</p>
+        <ul aria-label="Теги продукту" className="flex flex-wrap gap-2">{product.tags.map((tag) => <li key={tag.id}><TagBadge tag={tag} /></li>)}</ul>
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
       <div className="flex flex-wrap gap-2">

@@ -9,19 +9,20 @@ import OrderModal from './OrderModal';
 import CategoryManager from './CategoryManager';
 import DeleteProductDialog from './DeleteProductDialog';
 import { deleteProduct, setProductStatus } from '@/app/products/actions';
-import type { Product } from '@/lib/products';
+import type { Tag, TaggedProduct } from '@/lib/tags';
+import TagFilter from './TagFilter';
 import type { Category } from '@/lib/categories';
 
 type Props = {
   workspaceId: string; workspaceName: string; email: string; role: string;
-  products: Product[]; loadError: string | null; categories: Category[]; selectedCategory: string;
+  products: TaggedProduct[]; loadError: string | null; categories: Category[]; selectedCategory: string; tags: Tag[]; selectedTags: string[];
 };
 
 // Server-filtered props are the source of truth; selection is reflected in the URL.
-export default function ProductList({ workspaceId, workspaceName, email, role, products, loadError, categories, selectedCategory }: Props) {
+export default function ProductList({ workspaceId, workspaceName, email, role, products, loadError, categories, selectedCategory, tags, selectedTags }: Props) {
   const router = useRouter();
-  const [editor, setEditor] = useState<{ product: Product | null } | null>(null);
-  const [removing, setRemoving] = useState<Product | null>(null);
+  const [editor, setEditor] = useState<{ product: TaggedProduct | null } | null>(null);
+  const [removing, setRemoving] = useState<TaggedProduct | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [pending, startTransition] = useTransition();
@@ -35,7 +36,7 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
   }
 
   // Explicit modes distinguish completion, reactivation and permanent deletion.
-  function mutate(product: Product, mode: 'delete' | 'complete' | 'toggle') {
+  function mutate(product: TaggedProduct, mode: 'delete' | 'complete' | 'toggle') {
     if (pending) return;
     setError(''); setNotice('');
     startTransition(async () => {
@@ -54,7 +55,7 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
       <header className="bg-zinc-900 text-white">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-5 py-4">
           <h1 className="text-2xl font-bold">Shopik</h1>
-          <nav aria-label="Основна навігація" className="flex gap-4"><Link href="/" aria-current="page">Продукти</Link><Link href="/expenses">Витрати</Link></nav>
+          <nav aria-label="Основна навігація" className="flex gap-4"><Link href="/" aria-current="page">Продукти</Link><Link href="/expenses">Витрати</Link><Link href="/tags">Теги</Link></nav>
           <SignOutButton />
         </div>
       </header>
@@ -66,9 +67,10 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
           <CategoryManager workspaceId={workspaceId} categories={categories} />
           <nav aria-label="Категорії продуктів" className="flex flex-wrap gap-2">
             {categories.map((category) => <button key={category.id} disabled={pending} aria-pressed={selectedCategory === category.id}
-              onClick={() => { setError(''); startTransition(() => router.push(`/?category=${category.id}`)); }}
+              onClick={() => { setError(''); const params = new URLSearchParams({ category: category.id }); selectedTags.forEach((id) => params.append('tag', id)); startTransition(() => router.push(`/?${params}`)); }}
               className={`max-w-full break-words rounded border px-3 py-2 ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-white'}`}>{category.name}</button>)}
           </nav>
+          <TagFilter tags={tags} selected={selectedTags} action="/" preserved={{ name: 'category', value: selectedCategory }} />
           <div className="flex flex-wrap gap-3">
             <button ref={newButton} disabled={pending || !!loadError || categories.length === 0} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50" onClick={(event) => { editorTrigger.current = event.currentTarget; setNotice(''); setEditor({ product: null }); }}>Додати продукт</button>
             <button disabled={pending} onClick={() => startTransition(() => router.refresh())} className="rounded border border-zinc-400 px-4 py-2 disabled:opacity-50">{pending ? 'Оновлення…' : 'Оновити список'}</button>
@@ -78,7 +80,7 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
         {(loadError || error) && <p role="alert" className="rounded bg-red-50 p-4 text-red-800">{loadError || error}</p>}
         <p role="status" className="text-sm text-zinc-600">{pending ? 'Оновлюємо дані…' : notice}</p>
         {!loadError && categories.length === 0 && <p className="rounded border border-dashed p-6">Спочатку створіть категорію, щоб додати продукт.</p>}
-        {!loadError && categories.length > 0 && products.length === 0 && <section className="rounded-lg border border-dashed border-zinc-400 p-8 text-center"><h3 className="font-semibold">У цій категорії поки немає продуктів</h3><p className="mt-2 text-zinc-600">Додайте перший продукт.</p></section>}
+        {!loadError && categories.length > 0 && products.length === 0 && <section className="rounded-lg border border-dashed border-zinc-400 p-8 text-center"><h3 className="font-semibold">{selectedTags.length ? 'Продуктів із вибраними тегами немає' : 'У цій категорії поки немає продуктів'}</h3><p className="mt-2 text-zinc-600">Додайте перший продукт.</p></section>}
         {!loadError && <section aria-label="Продукти" aria-busy={pending} className="space-y-4">
           {products.map((product) => <OrderCard key={product.id} product={product} pending={pending}
             onEdit={(trigger) => { editorTrigger.current = trigger; setNotice(''); setEditor({ product }); }}
@@ -87,7 +89,7 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
       </main>
       {/* Separate dialogs for editing and the explicit expense/delete choice. */}
       {editor && <OrderModal key={editor.product?.id ?? 'new'} workspaceId={workspaceId} product={editor.product}
-        categories={categories} selectedCategory={selectedCategory} onClose={closeEditor}
+        categories={categories} tags={tags} selectedCategory={selectedCategory} onClose={closeEditor}
         onSaved={() => { setNotice('Продукт збережено.'); closeEditor(); }} />}
       {removing && <DeleteProductDialog product={removing} pending={pending} error={error}
         onClose={() => setRemoving(null)} onDelete={() => mutate(removing, 'delete')} onExpense={() => mutate(removing, 'complete')} />}

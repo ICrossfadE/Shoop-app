@@ -13,7 +13,7 @@ export type Product = {
   updated_at: string;
 };
 
-export type ProductFields = { name: string; description: string; price: string; category_id: string };
+export type ProductFields = { name: string; description: string; price: string; category_id: string; tag_ids?: string[] };
 export type ProductErrors = Partial<Record<keyof ProductFields, string>>;
 export type ProductResult = { ok: true } | { ok: false; error: string; fields?: ProductErrors };
 

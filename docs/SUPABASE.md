@@ -71,6 +71,8 @@ npm run dev
 
 ## Межі цього етапу
 
+Теги (задача 005): застосувати лише нову міграцію `supabase/migrations/202610290005_tags.sql`, потім виконати весь `supabase/tests/tags.sql`. Очікуваний результат: `PASS: tags, atomic save, AND filters, expense totals and RLS`. Наявні продукти й витрати зберігаються. `test:supabase` та `test:smoke` включають таблиці, RPC і сторінку тегів.
+
 Підключені Google Login, cookie-сесії, logout та особистий Workspace.
 Продукти перенесені в окремий етап: `docs/tasks/003-products.md`. Для них застосовується міграція `202610290002_products.sql`; JSON видалений без імпорту старих записів.
 

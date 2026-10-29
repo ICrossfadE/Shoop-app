@@ -1,7 +1,9 @@
+import type { Tag } from './tags';
 // Expense snapshots are immutable until reactivation or deletion of the product.
 export type Expense = {
   id: string; workspace_id: string; product_id: string; name: string;
   category_id: string; category_name: string; amount: number; currency: 'UAH'; occurred_at: string;
+  tags?: Tag[];
 };
 export type ExpenseMonth = {
   total: number;
