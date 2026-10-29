@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Shopik setup (Supabase environment variables, Google OAuth, SQL migration and verification): [docs/SUPABASE.md](../docs/SUPABASE.md).
+Run checks with `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
+If Turbopack fails to launch its PostCSS worker on Windows, use `npm run build -- --webpack`.
+
 ## Getting Started
 
 First, run the development server:

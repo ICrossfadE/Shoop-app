@@ -1,0 +1,34 @@
+'use client';
+
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+export default function GoogleSignIn() {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function signIn() {
+    setPending(true);
+    setError('');
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+    } catch {
+      setError('Не вдалося відкрити Google Login. Спробуйте ще раз.');
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <button onClick={signIn} disabled={pending} className="w-full rounded bg-blue-600 px-4 py-3 text-white hover:bg-blue-700 disabled:opacity-60">
+        {pending ? 'Перенаправлення…' : 'Увійти через Google'}
+      </button>
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}

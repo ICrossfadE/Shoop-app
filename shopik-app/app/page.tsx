@@ -1,68 +1,29 @@
-"use client";
-import { useState } from "react";
-import Image from "next/image";
-import orderList from "../data/product.json";
-import OrderCard from "./components/OrderCard";
-import OrderModal from "./components/OrderModal";
+import { redirect } from 'next/navigation';
+import { getSupabaseConfig } from '@/lib/supabase/config';
+import { createClient } from '@/lib/supabase/server';
+import ProductList from './components/ProductList';
 
-type Order = {
-  id: number;
-  title: string;
-  description: string;
-  price: number;
-};
+export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const [orders, setOrders] = useState(orderList);
-  const [isOrderModalOpen, setIsOpenModalOpen] = useState(false);
+export default async function Home() {
+  if (!getSupabaseConfig()) redirect('/login');
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims.sub) redirect('/login');
 
-  function toggleOrderModal() {
-    setIsOpenModalOpen(!isOrderModalOpen);
+  // Identity comes from auth.uid() in the RPC, never request parameters.
+  const { data: workspaces, error: workspaceError } = await supabase.rpc('ensure_personal_workspace');
+  if (workspaceError || !workspaces?.[0]) {
+    throw new Error('Unable to initialize personal workspace.');
   }
-
-  function newOrder(newOrder: Order) {
-    setOrders([...orders, newOrder]);
-  }
-
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans ">
-      <header className="flex items-center justify-between w-full py-4 bg-zinc-900">
-        <div className="flex justify-between items-center gap-4 w-full max-w-3xl px-6 mx-auto ">
-          <Image
-            src="/vercel.svg"
-            alt="Vercel Logo"
-            width={32}
-            height={32}
-            priority
-          />
-          <h1 className="text-2xl font-bold text-black dark:text-white">
-            Shopik
-          </h1>
-          <button className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600">
-            Sign In
-          </button>
-        </div>
-      </header>
-
-      <main className="flex flex-1 w-full max-w-3xl flex-col gap-4 items-center justify-between py-10 px-6 bg-white sm:items-start">
-        {/* Product Cards */}
-        {orders.map((order: Order) => (
-          <OrderCard key={order.id} product={order} />
-        ))}
-
-        {isOrderModalOpen && <OrderModal onAdd={newOrder} />}
-      </main>
-
-      <footer className="w-full py-4 bg-zinc-900">
-        <div className="flex justify-center items-center gap-4 w-full max-w-3xl px-6 mx-auto">
-          <button
-            className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-            onClick={toggleOrderModal}
-          >
-            New order
-          </button>
-        </div>
-      </footer>
-    </div>
-  );
+  const workspace = workspaces[0];
+  // Read persisted products only from the authenticated user's Workspace.
+  const { data: products, error: productsError } = await supabase.from('products').select('*')
+    .eq('workspace_id', workspace.workspace_id).order('created_at', { ascending: false }).order('id');
+  const loadError = productsError
+    ? 'Не вдалося завантажити продукти. Спробуйте оновити список.'
+    : null;
+  return <ProductList workspaceId={workspace.workspace_id} workspaceName={workspace.workspace_name}
+    products={products ?? []} loadError={loadError} role={workspace.member_role}
+    email={typeof data.claims.email === 'string' ? data.claims.email : ''} />;
 }
