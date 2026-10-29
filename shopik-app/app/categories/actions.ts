@@ -17,7 +17,7 @@ export async function saveCategory(workspaceId: string, id: string | null, input
     const { data, error } = await query.select('id').maybeSingle();
     if (error || !data) return { ok: false, error: error?.code === '23505' ? 'Категорія з такою назвою вже існує.' : 'Не вдалося зберегти категорію.' };
   } catch { return { ok: false, error: 'Немає з’єднання. Спробуйте знову.' }; }
-  revalidatePath('/');
+  revalidatePath('/'); revalidatePath('/settings');
   return { ok: true };
 }
 
@@ -30,6 +30,6 @@ export async function deleteCategory(workspaceId: string, id: string): Promise<P
     const { data, error } = await client.from('categories').delete().eq('id', id).eq('workspace_id', workspaceId).select('id').maybeSingle();
     if (error || !data) return { ok: false, error: error?.code === '23503' ? 'Категорія містить активні або завершені продукти. Завершені покупки можна видалити на сторінці витрат.' : 'Не вдалося видалити категорію. Спробуйте знову.' };
   } catch { return { ok: false, error: 'Немає з’єднання. Спробуйте знову.' }; }
-  revalidatePath('/');
+  revalidatePath('/'); revalidatePath('/settings');
   return { ok: true };
 }

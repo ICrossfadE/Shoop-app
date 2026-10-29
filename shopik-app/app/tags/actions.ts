@@ -14,6 +14,6 @@ export async function createTag(workspaceId: string, name: string, color: string
     const { data, error } = await client.from('tags').insert({ workspace_id: workspaceId, ...parsed }).select('id').maybeSingle();
     if (error || !data) return { ok: false, error: error?.code === '23505' ? 'Тег із такою назвою вже існує.' : 'Не вдалося створити тег.' };
   } catch { return { ok: false, error: 'Немає з’єднання. Спробуйте знову.' }; }
-  revalidatePath('/tags'); revalidatePath('/'); revalidatePath('/expenses');
+  revalidatePath('/tags'); revalidatePath('/'); revalidatePath('/settings'); revalidatePath('/expenses');
   return { ok: true };
 }

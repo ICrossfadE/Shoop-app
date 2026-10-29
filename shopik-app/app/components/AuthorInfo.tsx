@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 export default function AuthorInfo({ author, createdAt }: { author?: ProductAuthor; createdAt?: string }) {
   const name = author?.display_name.trim() || 'Невідомий автор';
   const timestamp = author?.created_at ?? createdAt;
-  return <div className="flex min-w-0 items-center gap-2 border-t border-zinc-200 pt-3 text-sm text-zinc-600">
+  return <div className="flex min-w-0 items-center gap-2 border-t border-line pt-3 text-sm text-muted">
     <Avatar name={name} url={author?.avatar_url ?? ''} /><div className="min-w-0"><p className="break-words">{name}</p><p>Створено: {timestamp ? <time dateTime={timestamp}>{creationDate(timestamp)}</time> : 'Дата невідома'}</p></div>
   </div>;
 }

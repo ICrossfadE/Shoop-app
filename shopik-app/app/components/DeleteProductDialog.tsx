@@ -15,12 +15,12 @@ export default function DeleteProductDialog({ product, pending, error, onClose, 
   }, []);
   return <dialog ref={dialog} aria-labelledby="delete-product-title" aria-describedby="delete-product-description"
     onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }}
-    className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-xl bg-white p-6 text-zinc-900 shadow-xl backdrop:bg-black/50">
+    className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-xl bg-surface p-6 text-foreground shadow-xl backdrop:bg-black/50">
     {/* Explain both outcomes before any irreversible product deletion. */}
     <h2 id="delete-product-title" className="text-xl font-semibold">Що зробити з продуктом?</h2>
     <p className="my-3 break-words font-medium">{product.name}</p>
     <p id="delete-product-description">Можна завершити продукт і врахувати його у витратах або видалити. Видалення прибере також пов’язану витрату зі статистики.</p>
-    {error && <p role="alert" className="mt-3 text-red-700">{error}</p>}
+    {error && <p role="alert" className="mt-3 text-danger">{error}</p>}
     <div className="mt-5 flex flex-wrap gap-3">
       <button autoFocus disabled={pending} onClick={onClose} className="rounded border px-3 py-2">Скасувати</button>
       <button disabled={pending} onClick={onExpense} className="rounded bg-green-700 px-3 py-2 text-white">{product.status === 'completed' ? 'Залишити у витратах' : 'Перенести у витрати'}</button>

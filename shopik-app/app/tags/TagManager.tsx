@@ -26,15 +26,15 @@ export default function TagManager({ workspaceId, tags }: { workspaceId: string;
   }
   return <div className="space-y-6">
     {/* Shared Workspace tag creation, with a native color picker. */}
-    <form onSubmit={submit} className="space-y-4 rounded-lg bg-white p-5 shadow-sm" aria-busy={pending}>
+    <form onSubmit={submit} className="space-y-4 rounded-lg bg-surface p-5 shadow-sm" aria-busy={pending}>
       <fieldset disabled={pending} className="space-y-3">
-        <div><label htmlFor="tag-name" className="block font-medium">Назва</label><input id="tag-name" name="name" required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2" /></div>
+        <div><label htmlFor="tag-name" className="block font-medium">Назва</label><input id="tag-name" name="name" required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded border border-line px-3 py-2" /></div>
         <div><label htmlFor="tag-color" className="block font-medium">Колір</label><input id="tag-color" name="color" type="color" required value={color} onChange={(event) => setColor(event.target.value.toUpperCase())} className="mt-1 h-12 w-20 cursor-pointer" /><span className="ml-3 text-sm">{color}</span></div>
         <div aria-label="Попередній вигляд тегу"><TagBadge tag={{ name: name.trim() || 'Назва тегу', color }} /></div>
       </fieldset>
-      {error && <p role="alert" className="text-red-700">{error}</p>}
+      {error && <p role="alert" className="text-danger">{error}</p>}
       <button disabled={pending} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{pending ? 'Збереження…' : 'Створити тег'}</button>
-      <p role="status" className="text-sm text-zinc-600">{notice}</p>
+      <p role="status" className="text-sm text-muted">{notice}</p>
     </form>
     {/* Tags exist independently of any product. */}
     <section aria-labelledby="workspace-tags"><h2 id="workspace-tags" className="mb-3 text-lg font-semibold">Теги простору</h2>

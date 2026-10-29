@@ -1,5 +1,7 @@
 # Supabase: перший запуск
 
+Етап 007: застосувати лише `supabase/migrations/202610290007_account_settings.sql`, потім виконати весь `supabase/tests/account_settings.sql`. Очікується `PASS: personal themes, validation, profile isolation and metadata sync`. Налаштування доступні на `/settings`, теги — `/settings#tags`, категорії — `/settings#categories`; `/tags` перенаправляє в налаштування. Початкова тема світла. Після зміни схеми перезапустіть dev-сервер.
+
 Етап 006: застосувати тільки `supabase/migrations/202610290006_logic_ui.sql`, потім виконати весь `supabase/tests/logic_ui.sql`. Очікується `PASS: final completion, active lists, immutable tags, scoped authors and deletion`. Попередні міграції не повторювати. Завершені покупки приховані з категорій і не повертаються в активні; створення/збереження та видалення витрат залишаються атомарними.
 
 ## Локальні параметри

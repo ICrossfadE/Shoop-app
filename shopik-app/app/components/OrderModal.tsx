@@ -59,50 +59,50 @@ export default function OrderModal({ workspaceId, product, categories, tags, sel
   return (
     <dialog ref={dialog} aria-labelledby="product-dialog-title" aria-describedby="product-dialog-description"
       onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }}
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl bg-white p-6 text-zinc-900 shadow-xl backdrop:bg-black/50">
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl bg-surface p-6 text-foreground shadow-xl backdrop:bg-black/50">
       {/* Product form shared by create and edit; labels have matching field IDs. */}
       <h2 id="product-dialog-title" className="text-xl font-semibold">{product ? 'Редагувати продукт' : 'Новий продукт'}</h2>
-      <p id="product-dialog-description" className="mt-2 text-sm text-zinc-600">Ціна у гривнях. Опис можна залишити порожнім.</p>
+      <p id="product-dialog-description" className="mt-2 text-sm text-muted">Ціна у гривнях. Опис можна залишити порожнім.</p>
       <form onSubmit={submit} noValidate className="mt-5 space-y-4" aria-busy={pending}>
         <fieldset disabled={pending} className="space-y-4 disabled:opacity-60">
           {/* Tags are optional; checkboxes prevent duplicate assignment. */}
           <fieldset><legend className="mb-2 font-medium">Теги (необов’язково)</legend>
             <div className="flex flex-wrap gap-3">{tags.map((tag) => <label key={tag.id} className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={tagIds.includes(tag.id)} onChange={(event) => setTagIds((ids) => event.target.checked ? [...ids, tag.id] : ids.filter((id) => id !== tag.id))} /><TagBadge tag={tag} /></label>)}</div>
-            {tags.length === 0 && <p className="text-sm text-zinc-600">Створіть теги на сторінці «Теги», щоб додавати їх до продуктів.</p>}
-            {fields.tag_ids && <p className="text-sm text-red-700">{fields.tag_ids}</p>}
+            {tags.length === 0 && <p className="text-sm text-muted">Створіть теги у налаштуваннях акаунта, щоб додавати їх до продуктів.</p>}
+            {fields.tag_ids && <p className="text-sm text-danger">{fields.tag_ids}</p>}
           </fieldset>
           {/* Mandatory category is also checked by the Workspace-scoped foreign key. */}
           <div>
             <label htmlFor="product-category" className="block font-medium">Категорія</label>
-            <select id="product-category" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} aria-invalid={!!fields.category_id} aria-describedby={fields.category_id ? 'category-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2">
+            <select id="product-category" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} aria-invalid={!!fields.category_id} aria-describedby={fields.category_id ? 'category-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2">
               <option value="">Виберіть категорію</option>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-            {fields.category_id && <p id="category-error" className="mt-1 text-sm text-red-700">{fields.category_id}</p>}
+            {fields.category_id && <p id="category-error" className="mt-1 text-sm text-danger">{fields.category_id}</p>}
           </div>
           <div>
             <label htmlFor="product-name" className="block font-medium">Назва</label>
-            <input autoFocus id="product-name" name="name" required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} aria-invalid={!!fields.name} aria-describedby={fields.name ? 'name-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2" />
-            {fields.name && <p id="name-error" className="mt-1 text-sm text-red-700">{fields.name}</p>}
+            <input autoFocus id="product-name" name="name" required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} aria-invalid={!!fields.name} aria-describedby={fields.name ? 'name-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
+            {fields.name && <p id="name-error" className="mt-1 text-sm text-danger">{fields.name}</p>}
           </div>
           <div>
             <label htmlFor="product-description" className="block font-medium">Опис (необов’язково)</label>
-            <textarea id="product-description" name="description" rows={3} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} aria-invalid={!!fields.description} aria-describedby={fields.description ? 'description-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2" />
-            {fields.description && <p id="description-error" className="mt-1 text-sm text-red-700">{fields.description}</p>}
+            <textarea id="product-description" name="description" rows={3} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} aria-invalid={!!fields.description} aria-describedby={fields.description ? 'description-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
+            {fields.description && <p id="description-error" className="mt-1 text-sm text-danger">{fields.description}</p>}
           </div>
           <div>
             <label htmlFor="product-price" className="block font-medium">Ціна, грн</label>
-            <input id="product-price" name="price" type="text" inputMode="decimal" required value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={!!fields.price} aria-describedby={fields.price ? 'price-error' : undefined} className="mt-1 w-full rounded border border-zinc-400 px-3 py-2" />
-            {fields.price && <p id="price-error" className="mt-1 text-sm text-red-700">{fields.price}</p>}
+            <input id="product-price" name="price" type="text" inputMode="decimal" required value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={!!fields.price} aria-describedby={fields.price ? 'price-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
+            {fields.price && <p id="price-error" className="mt-1 text-sm text-danger">{fields.price}</p>}
           </div>
         </fieldset>
-        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         {/* Disable dismissal while a request is in flight to avoid ambiguous saves. */}
         <div className="flex flex-wrap justify-end gap-3">
-          <button type="button" disabled={pending} onClick={onClose} className="rounded border border-zinc-400 px-4 py-2 disabled:opacity-50">Скасувати</button>
+          <button type="button" disabled={pending} onClick={onClose} className="rounded border border-line px-4 py-2 disabled:opacity-50">Скасувати</button>
           <button type="submit" disabled={pending} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{pending ? 'Збереження…' : 'Зберегти'}</button>
         </div>
-        {pending && <p role="status" className="text-sm text-zinc-600">Зберігаємо продукт…</p>}
+        {pending && <p role="status" className="text-sm text-muted">Зберігаємо продукт…</p>}
       </form>
     </dialog>
   );

@@ -4,7 +4,7 @@ import type { Expense, ExpenseMonth } from '../expenses';
 import type { Tag, TaggedProduct } from '../tags';
 import type { ProductAuthor } from '../identity';
 // Keep in sync with the versioned SQL migrations.
-type Profile = { id: string; display_name: string; avatar_url: string; created_at: string };
+type Profile = { id: string; display_name: string; avatar_url: string; theme: 'light' | 'dark'; created_at: string };
 type Workspace = {
   id: string;
   name: string;
@@ -32,7 +32,7 @@ export type Database = {
         Update: Partial<Pick<Product, 'name' | 'description' | 'price' | 'status' | 'category_id'>>;
         Relationships: [];
       };
-      profiles: { Row: Profile; Insert: Profile; Update: Partial<Pick<Profile, 'display_name'>>; Relationships: [] };
+      profiles: { Row: Profile; Insert: Profile; Update: Partial<Pick<Profile, 'display_name' | 'theme'>>; Relationships: [] };
       workspaces: { Row: Workspace; Insert: Workspace; Update: Partial<Pick<Workspace, 'name'>>; Relationships: [] };
       workspace_members: { Row: Membership; Insert: Membership; Update: Partial<Pick<Membership, 'role'>>; Relationships: [] };
     };

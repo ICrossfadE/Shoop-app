@@ -27,7 +27,7 @@ async function assertLoginRedirect(response: Response) {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.ok(/<meta[^>]*http-equiv="refresh"[^>]*content="[01];url=\/login"/.test(html), 'Streamed response must redirect to login');
-  assert.ok(!/id="workspace-heading"|aria-label="Продукти"|id="expense-categories"|id="workspace-tags"/.test(html), 'Unauthenticated response must not include Workspace HTML');
+  assert.ok(!/id="workspace-heading"|aria-label="Список покупок"|id="expense-categories"|id="workspace-tags"|id="settings-tags-title"/.test(html), 'Unauthenticated response must not include Workspace HTML');
 }
 
 try {
@@ -49,11 +49,27 @@ try {
   const expenses = await fetch(`${origin}/expenses`, { redirect: 'manual' });
   await assertLoginRedirect(expenses);
   const tags = await fetch(`${origin}/tags`, { redirect: 'manual' });
-  await assertLoginRedirect(tags);
+  if (tags.status === 307) {
+    const legacyTarget = new URL(tags.headers.get('location')!, origin);
+    assert.equal(legacyTarget.pathname, '/settings'); assert.equal(legacyTarget.hash, '#tags');
+  } else {
+    assert.equal(tags.status, 200);
+    const html = await tags.text();
+    assert.ok(/<meta[^>]*http-equiv="refresh"[^>]*content="[01];url=\/settings#tags"/.test(html), 'Legacy tags must redirect to settings even when streamed');
+    assert.ok(!html.includes('id="settings-tags-title"'), 'Legacy redirect must not render protected settings');
+  }
+  const settings = await fetch(`${origin}/settings`, { redirect: 'manual' });
+  await assertLoginRedirect(settings);
 
   const login = await fetch(`${origin}/login`);
   assert.equal(login.status, 200);
   assert.match(await login.text(), /Shopik/);
+  // Initial HTML carries the correct appearance without a client-side theme script.
+  for (const [cookie, expected] of [['dark', 'dark'], ['light', 'light'], ['invalid', 'light']]) {
+    const themed = await fetch(`${origin}/login`, { headers: { Cookie: `shopik-theme=${cookie}` } });
+    assert.equal(themed.status, 200);
+    assert.ok((await themed.text()).includes(`data-theme="${expected}"`), 'Theme must be present in initial server HTML');
+  }
 
   for (const path of ['/auth/callback', '/auth/callback?error=access_denied', '/auth/callback?code=shopik-invalid-test-code', '/auth/callback?next=https://example.com', '/auth/callback?next=//example.com']) {
     const response = await fetch(origin + path, { redirect: 'manual' });
@@ -82,7 +98,7 @@ try {
   const projectRef = new URL(supabaseConfig.url).hostname.split('.')[0];
   const cookieName = `sb-${projectRef}-auth-token`;
   for (const cookieValue of ['base64-invalid', `base64-${encode(forgedSession)}`]) {
-    for (const path of ['/', '/expenses', '/tags']) {
+    for (const path of ['/', '/expenses', '/settings']) {
       const denied = await fetch(`${origin}${path}`, {
         redirect: 'manual',
         headers: { Cookie: `${cookieName}=${cookieValue}` },
@@ -91,7 +107,7 @@ try {
       await assertLoginRedirect(denied);
     }
   }
-  console.log('PASS: protected root, login, invalid OAuth code, OAuth cancellation, open redirect rejection, no-store headers, damaged and forged session cookies.');
+  console.log('PASS: protected settings/list/expenses, legacy tags redirect, initial light/dark HTML, OAuth errors and forged sessions.');
 } finally {
   if (server.exitCode === null) {
     const exited = once(server, 'exit');

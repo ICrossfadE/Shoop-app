@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Explicit account selection is the only theme source; system appearance cannot override it. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #18181b;
+  --surface: #ffffff;
+  --soft: #e4e4e7;
+  --muted: #52525b;
+  --line: #a1a1aa;
+  --nav: #18181b;
+  --link: #1d4ed8;
+  --danger: #b91c1c;
+  --danger-surface: #fef2f2;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #111318;
+  --foreground: #f4f4f5;
+  --surface: #1e2028;
+  --soft: #343742;
+  --muted: #c4c4ce;
+  --line: #626675;
+  --nav: #09090b;
+  --link: #93c5fd;
+  --danger: #fca5a5;
+  --danger-surface: #421f28;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-page: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-soft: var(--soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-nav: var(--nav);
+  --color-link: var(--link);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+  *, ::before, ::after { border-color: var(--line); }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea, select {
+    background-color: var(--surface); color: var(--foreground);
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  button:not(:disabled), summary { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
 }
