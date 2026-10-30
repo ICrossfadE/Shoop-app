@@ -37,7 +37,7 @@ begin
   begin
     delete from public.categories where id = current_setting('shopik.test_category_a')::uuid;
     raise exception 'Nonempty category deleted';
-  exception when foreign_key_violation then null; end;
+  exception when foreign_key_violation or restrict_violation then null; end;
   update public.products set status = 'completed' where id = pid;
   update public.products set status = 'completed' where id = pid;
   if (select count(*) from public.expenses where product_id = pid) <> 1 then raise exception 'Completion duplicated or lost'; end if;
@@ -107,7 +107,7 @@ begin
     insert into public.products(workspace_id, category_id, name, price)
     values(own_workspace, current_setting('shopik.test_category_a')::uuid, 'Чужа категорія', 1);
     raise exception 'Cross-Workspace category reference accepted';
-  exception when foreign_key_violation then null; end;
+  exception when foreign_key_violation or restrict_violation then null; end;
   begin
     perform public.expense_month(current_setting('shopik.test_workspace_a')::uuid, '2026-10-01');
     raise exception 'Cross-Workspace aggregation allowed';

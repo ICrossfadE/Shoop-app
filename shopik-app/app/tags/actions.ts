@@ -1,19 +1,12 @@
 'use server';
-import { revalidatePath } from 'next/cache';
-import { workspaceClient } from '@/lib/workspace';
 import { validateTag } from '@/lib/tags';
-import type { ProductResult } from '@/lib/products';
+import { operation } from '@/lib/operations';
+import type { MutationResult } from '@/lib/list-model';
 
-// Only a member can create a tag; ownership is derived by the database.
-export async function createTag(workspaceId: string, name: string, color: string): Promise<ProductResult> {
+// Identity and timestamps remain database-owned.
+export async function createTag(workspaceId: string, name: string, color: string, operationId: string): Promise<MutationResult> {
   const parsed = validateTag(name, color);
-  if (!parsed) return { ok: false, error: 'Вкажіть назву від 1 до 120 символів і колір у форматі #RRGGBB.' };
-  try {
-    const client = await workspaceClient(workspaceId);
-    if (!client) return { ok: false, error: 'Немає доступу. Оновіть сторінку.' };
-    const { data, error } = await client.from('tags').insert({ workspace_id: workspaceId, ...parsed }).select('id').maybeSingle();
-    if (error || !data) return { ok: false, error: error?.code === '23505' ? 'Тег із такою назвою вже існує.' : 'Не вдалося створити тег.' };
-  } catch { return { ok: false, error: 'Немає з’єднання. Спробуйте знову.' }; }
-  revalidatePath('/tags'); revalidatePath('/'); revalidatePath('/settings'); revalidatePath('/expenses');
-  return { ok: true };
+  if (!parsed) return { ok: false, error: 'Вкажіть назву від 1 до 120 символів і колір #RRGGBB.' };
+  const result = await operation(workspaceId, operationId, 'create_tag', parsed);
+  return result;
 }

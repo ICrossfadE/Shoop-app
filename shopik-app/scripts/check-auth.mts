@@ -61,6 +61,15 @@ try {
   const settings = await fetch(`${origin}/settings`, { redirect: 'manual' });
   await assertLoginRedirect(settings);
 
+  const badFilter = await fetch(origin + '/api/lists?kind=invalid');
+  assert.equal(badFilter.status, 400);
+  const deniedList = await fetch(origin + '/api/lists?workspace=b8bc6ee0-9ddb-456a-8f41-637ec271a099&kind=products&category=b8bc6ee0-9ddb-456a-8f41-637ec271a099');
+  assert.equal(deniedList.status, 403);
+  assert.match(deniedList.headers.get('cache-control')!, /no-store/);
+
+  const deniedMetadata = await fetch(origin + '/api/workspace?workspace=b8bc6ee0-9ddb-456a-8f41-637ec271a099');
+  assert.equal(deniedMetadata.status, 403);
+  assert.match(deniedMetadata.headers.get('cache-control')!, /no-store/);
   const login = await fetch(`${origin}/login`);
   assert.equal(login.status, 200);
   assert.match(await login.text(), /Shopik/);

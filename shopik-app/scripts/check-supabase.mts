@@ -54,4 +54,15 @@ for (const [rpc, body] of [
   assert.ok([401, 403].includes(response.status), `Anonymous access to ${rpc} must be denied`);
   console.log(`PASS: ${rpc} rejects anonymous execution.`);
 }
+if (process.argv.includes('--optimistic')) {
+  for (const [rpc, body] of [
+    ['list_snapshot', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_kind: 'products', p_category_id: null, p_month: null, p_tag_ids: [] }],
+    ['product_authors_for_ids', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_ids: [] }],
+    ['apply_operation', { p_workspace_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_operation_id: 'b8bc6ee0-9ddb-456a-8f41-637ec271a099', p_kind: 'create_tag', p_payload: {} }],
+  ] as const) {
+    const response = await fetch(config.url + '/rest/v1/rpc/' + rpc, { method: 'POST', headers: { apikey: config.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+    assert.ok([401, 403].includes(response.status), rpc + ' must exist and reject anonymous execution (apply migration 008 first)');
+    console.log('PASS: ' + rpc + ' rejects anonymous execution.');
+  }
+}
 console.log('NOT TESTED: two-user RLS, duplicate Workspaces, authenticated session refresh and logout.');

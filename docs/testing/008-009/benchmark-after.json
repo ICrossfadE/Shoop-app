@@ -1,0 +1,76 @@
+[
+  {
+    "version": "after",
+    "operation": "create",
+    "elapsedMs": 453,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/apply_operation save_product"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "edit",
+    "elapsedMs": 400,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/apply_operation save_product"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "complete",
+    "elapsedMs": 310,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/apply_operation complete_product"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "delete",
+    "elapsedMs": 370,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/apply_operation delete_product"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "category first visit",
+    "elapsedMs": 355,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/list_snapshot products"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "category cached return",
+    "elapsedMs": 157,
+    "requests": 0,
+    "paths": []
+  },
+  {
+    "version": "after",
+    "operation": "expense month first visit",
+    "elapsedMs": 382,
+    "requests": 2,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/list_snapshot expenses"
+    ]
+  },
+  {
+    "version": "after",
+    "operation": "expense month cached return",
+    "elapsedMs": 173,
+    "requests": 0,
+    "paths": []
+  }
+]

@@ -35,7 +35,8 @@ do $$
 begin
   if exists (select 1 from public.workspaces)
     or exists (select 1 from public.workspace_members)
-    or exists (select 1 from public.profiles) then
+    -- Migration 006 creates B's own profile at signup, before Workspace bootstrap.
+    or exists (select 1 from public.profiles where id <> auth.uid()) then
     raise exception 'User B can read user A data';
   end if;
 end;

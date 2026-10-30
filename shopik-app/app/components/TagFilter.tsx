@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useOptimistic, useRef, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { navigateList } from '@/lib/use-list';
 import TagBadge from './TagBadge';
 import type { Tag } from '@/lib/tags';
 
@@ -8,7 +8,6 @@ import type { Tag } from '@/lib/tags';
 export default function TagFilter({ tags, selected, action, preserved }: {
   tags: Tag[]; selected: string[]; action: '/' | '/expenses'; preserved: { name: string; value: string };
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [visible, showSelection] = useOptimistic(selected, (_previous: string[], next: string[]) => next);
   const latest = useRef(selected);
@@ -19,7 +18,7 @@ export default function TagFilter({ tags, selected, action, preserved }: {
     latest.current = next;
     const params = new URLSearchParams({ [preserved.name]: preserved.value });
     next.forEach((id) => params.append('tag', id));
-    startTransition(() => { showSelection(next); router.push(`${action}?${params}`, { scroll: false }); });
+    startTransition(() => { showSelection(next); navigateList(`${action}?${params}`); });
   }
   function toggle(id: string) {
     apply(latest.current.includes(id) ? latest.current.filter((value) => value !== id) : [...latest.current, id].sort());

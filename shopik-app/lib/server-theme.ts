@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { createClient } from './supabase/server';
+import { readSession } from './server-session';
 import { getSupabaseConfig } from './supabase/config';
 import { resolveTheme, themeCookie, type Theme } from './theme';
 
@@ -10,8 +10,7 @@ export const readTheme = cache(async (): Promise<{ theme: Theme; error: boolean;
   if (!getSupabaseConfig()) return { theme: resolveTheme(false, null, localTheme), error: false, userId: '' };
   let userId = '';
   try {
-    const client = await createClient();
-    const { data, error } = await client.auth.getClaims();
+    const { client, data, error } = await readSession();
     userId = !error && typeof data?.claims.sub === 'string' ? data.claims.sub : '';
     if (!userId) return { theme: resolveTheme(false, null, localTheme), error: false, userId: '' };
     const profile = await client.from('profiles').select('theme').eq('id', userId).maybeSingle();

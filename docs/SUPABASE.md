@@ -87,3 +87,7 @@ npm run dev
 Офіційні джерела:
 - [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client?framework=nextjs)
 - [Google OAuth](https://supabase.com/docs/guides/auth/social-sign-in/auth-google)
+
+## Етапи 008–009 — нова міграція
+
+Після 007 виконати лише supabase/migrations/202610300008_optimistic_queries.sql. Вона ще не застосована до робочої бази. Не додавати shopik_private до exposed schemas. Потім у тестовому проєкті виконати весь supabase/tests/optimistic_queries.sql (rollback), а в shopik-app — npm run test:supabase -- --optimistic. Перезапустити застосунок або розгорнути нову збірку. Без нових RPC збереження не переходить на старий неідемпотентний шлях. Звіт та обмеження перевірок: docs/testing/008-009/README.md.

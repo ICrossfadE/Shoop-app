@@ -1,0 +1,118 @@
+[
+  {
+    "version": "before",
+    "operation": "create",
+    "elapsedMs": 1053,
+    "requests": 8,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/save_product_tags",
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "edit",
+    "elapsedMs": 1056,
+    "requests": 8,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "POST /rest/v1/rpc/save_product_tags",
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "complete",
+    "elapsedMs": 982,
+    "requests": 8,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "PATCH /rest/v1/products",
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "delete",
+    "elapsedMs": 1038,
+    "requests": 8,
+    "paths": [
+      "GET /rest/v1/workspace_members",
+      "DELETE /rest/v1/products",
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "category first visit",
+    "elapsedMs": 463,
+    "requests": 5,
+    "paths": [
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "category cached return",
+    "elapsedMs": 387,
+    "requests": 5,
+    "paths": [
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/categories",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/filtered_products"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "expense month first visit",
+    "elapsedMs": 1142,
+    "requests": 5,
+    "paths": [
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/expense_month_tags"
+    ]
+  },
+  {
+    "version": "before",
+    "operation": "expense month cached return",
+    "elapsedMs": 643,
+    "requests": 5,
+    "paths": [
+      "POST /rest/v1/rpc/ensure_personal_workspace",
+      "GET /rest/v1/profiles",
+      "GET /rest/v1/tags",
+      "POST /rest/v1/rpc/workspace_product_authors",
+      "POST /rest/v1/rpc/expense_month_tags"
+    ]
+  }
+]

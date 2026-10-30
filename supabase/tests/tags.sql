@@ -26,14 +26,15 @@ select set_config('shopik.tag_product_c', public.save_product_tags(current_setti
 reset role;
 
 
--- Inject a failure AFTER product UPDATE, during link insertion, to prove rollback.
+-- Inject a failure AFTER product UPDATE, during a link change, to prove rollback.
 create function public.shopik_test_tag_link_failure() returns trigger language plpgsql as $$
 begin
   if current_setting('shopik.test_fail_link', true) = 'yes' then raise exception 'Test link failure' using errcode = '23514'; end if;
+  if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
 $$;
-create trigger shopik_test_tag_link_failure before insert on public.product_tags for each row execute function public.shopik_test_tag_link_failure();
+create trigger shopik_test_tag_link_failure before insert or delete on public.product_tags for each row execute function public.shopik_test_tag_link_failure();
 set local role authenticated;
 do $$
 declare wid uuid := current_setting('shopik.tags_workspace_a')::uuid;

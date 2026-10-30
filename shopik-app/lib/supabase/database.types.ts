@@ -38,6 +38,9 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      apply_operation: { Args: { p_workspace_id: string; p_operation_id: string; p_kind: string; p_payload: Record<string, unknown> }; Returns: import('../list-model').MutationData };
+      list_snapshot: { Args: { p_workspace_id: string; p_kind: string; p_category_id: string | null; p_month: string | null; p_tag_ids: string[] }; Returns: import('../list-model').ListData };
+      product_authors_for_ids: { Args: { p_workspace_id: string; p_ids: string[] }; Returns: ProductAuthor[] };
       workspace_product_authors: { Args: { p_workspace_id: string }; Returns: ProductAuthor[] };
       save_product_tags: { Args: { p_workspace_id: string; p_product_id: string | null; p_name: string; p_description: string; p_price: number; p_category_id: string; p_tag_ids: string[] }; Returns: string };
       filtered_products: { Args: { p_workspace_id: string; p_category_id: string; p_tag_ids: string[] }; Returns: TaggedProduct[] };

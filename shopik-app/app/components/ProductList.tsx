@@ -1,32 +1,43 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useList, listCache, navigateList } from '@/lib/use-list';
+import { readTagFilter } from '@/lib/tags';
+import { isWorkspaceId } from '@/lib/products';
 
-import AppHeader from './AppHeader';
 import type { Account, ProductAuthor } from '@/lib/identity';
 import OrderCard from './OrderCard';
-import OrderModal from './OrderModal';
-import Link from 'next/link';
+import ScreenLink from './ScreenLink';
 import DeleteProductDialog from './DeleteProductDialog';
-import { deleteProduct, setProductStatus } from '@/app/products/actions';
+import { mutateProduct } from '@/lib/mutate-product';
 import type { Tag, TaggedProduct } from '@/lib/tags';
 import TagFilter from './TagFilter';
 import type { Category } from '@/lib/categories';
 
 type Props = {
-  workspaceId: string; workspaceName: string; email: string; role: string; account: Account; authors: ProductAuthor[];
+  hasInitial?: boolean; userId: string; workspaceId: string; workspaceName: string; email: string; role: string; account: Account; authors: ProductAuthor[];
   products: TaggedProduct[]; loadError: string | null; categories: Category[]; selectedCategory: string; tags: Tag[]; selectedTags: string[];
 };
 
 // Server-filtered props are the source of truth; selection is reflected in the URL.
-export default function ProductList({ workspaceId, workspaceName, email, role, products, loadError, categories, selectedCategory, tags, selectedTags, account, authors }: Props) {
-  const router = useRouter();
+export default function ProductList({ hasInitial = true, userId, workspaceId, workspaceName, email, role, products: initialProducts, loadError: initialError, categories, selectedCategory: initialCategory, tags, selectedTags: initialTags, authors: initialAuthors }: Props) {
+  const params = useSearchParams();
+  const requested = params.get('category');
+  const selectedCategory = isWorkspaceId(requested) && categories.some((category) => category.id === requested) ? requested : categories[0]?.id ?? '';
+  const parsedTags = readTagFilter(params.getAll('tag'));
+  const selectedTags = parsedTags ?? [];
+  const invalidTags = !parsedTags || selectedTags.some((id) => !tags.some((tag) => tag.id === id));
+  const filter = { kind: 'products' as const, category: selectedCategory, tags: selectedTags, month: '' };
+  const query = useList(userId, workspaceId, filter, { kind: 'products', category: initialCategory, tags: initialTags, month: '' }, !hasInitial || initialError ? undefined : { products: initialProducts, authors: initialAuthors, expenses: null });
+  const products = invalidTags ? [] : query.data?.products ?? [];
+  const authors = query.data?.authors ?? [];
+  const loadError = invalidTags ? 'Один із тегів недоступний. Скиньте фільтр.' : (!query.data && (query.error || initialError)) || null;
   const categoryNav = useRef<HTMLElement>(null);
   const authorMap = new Map(authors.map((author) => [author.product_id, author]));
   // Keep the active category visible inside its horizontal scroll container.
   useEffect(() => { categoryNav.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [selectedCategory]);
-  const [editor, setEditor] = useState<{ product: TaggedProduct | null } | null>(null);
+  const setEditor = (value: { product: TaggedProduct | null }) => listCache.openDraft({ ...value, key: crypto.randomUUID(), trigger: editorTrigger.current ?? newButton.current ?? undefined, scope: query.scope, userId, workspaceId, categories, tags, selectedCategory });
   const [removing, setRemoving] = useState<TaggedProduct | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -34,30 +45,18 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
   const newButton = useRef<HTMLButtonElement>(null);
   const editorTrigger = useRef<HTMLElement | null>(null);
 
-  // Native dialog closes before restoring focus to the original control.
-  function closeEditor() {
-    setEditor(null);
-    (editorTrigger.current ?? newButton.current)?.focus();
-  }
-
   // Explicit modes distinguish completion and permanent deletion.
   function mutate(product: TaggedProduct, mode: 'delete' | 'complete') {
-    if (pending) return;
-    setError(''); setNotice('');
+    setError(''); setNotice(''); setRemoving(null);
     startTransition(async () => {
-      try {
-        const result = mode === 'delete' ? await deleteProduct(workspaceId, product.id)
-          : await setProductStatus(workspaceId, product.id, 'completed');
-        if (!result.ok) setError(result.error);
-        else { setRemoving(null); setNotice(mode === 'delete' ? 'Продукт і пов’язану витрату видалено.' : 'Статус і витрати оновлено.'); }
-      } catch { setError('Не вдалося виконати дію. Спробуйте знову.'); }
+      const result = await mutateProduct(query.scope, workspaceId, product.id, mode, product.name);
+      if (result?.ok) setNotice(mode === 'delete' ? 'Продукт видалено.' : 'Статус і витрати оновлено.');
     });
   }
 
   return (
     <div className="flex flex-1 flex-col bg-page text-foreground">
       {/* Workspace navigation and session controls. */}
-      <AppHeader account={account} page="products" />
       <main className="app-main flex-1 space-y-5">
         {/* Categories are persisted independently of the selected product list. */}
         <section className="space-y-3" aria-labelledby="workspace-heading">
@@ -68,34 +67,32 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
 
         </section>
         <div className="shopping-layout"><aside>          <TagFilter tags={tags} selected={selectedTags} action="/" preserved={{ name: 'category', value: selectedCategory }} /></aside><div className="shopping-content">          <nav ref={categoryNav} aria-label="Категорії продуктів" className="categories flex w-full min-w-0 gap-2 overflow-x-auto py-2">
-            {categories.map((category) => <button key={category.id} title={category.name} disabled={pending} aria-pressed={selectedCategory === category.id}
-              onClick={() => { setError(''); const params = new URLSearchParams({ category: category.id }); selectedTags.forEach((id) => params.append('tag', id)); startTransition(() => router.push(`/?${params}`, { scroll: false })); }}
+            {categories.map((category) => <button key={category.id} title={category.name} aria-pressed={selectedCategory === category.id}
+              onClick={() => { setError(''); const params = new URLSearchParams({ category: category.id }); selectedTags.forEach((id) => params.append('tag', id)); navigateList(`/?${params}`); }}
               className={`max-w-[85%] shrink-0 whitespace-nowrap overflow-hidden text-ellipsis rounded border px-3 py-2 ${selectedCategory === category.id ? 'button-primary' : 'bg-surface'}`}>{category.name}</button>)}
           </nav>
 
         {/* Distinguish loading failures, zero categories and an empty category. */}
+        {query.error && query.data && <p role="alert">{query.error} <button onClick={query.retry}>Спробувати знову</button></p>}
         {(loadError || error) && <p role="alert" className="rounded bg-danger-surface p-4 text-danger">{loadError || error}</p>}
-        {loadError && <button disabled={pending} onClick={() => startTransition(() => router.refresh())} className="rounded border px-3 py-2">Спробувати знову</button>}
-        <p role="status" className="text-sm text-muted">{pending ? 'Оновлюємо дані…' : notice}</p>
-        {!loadError && categories.length === 0 && <p className="rounded border border-dashed p-6">Спочатку створіть категорію, щоб додати продукт. <Link href="/settings#categories" className="text-link underline">Створити категорію</Link></p>}
+        {loadError && <button disabled={pending} onClick={query.retry} className="rounded border px-3 py-2">Спробувати знову</button>}
+        <p role="status" className="text-sm text-muted">{query.pending.length ? 'Зберігається…' : query.loading ? 'Оновлюємо дані…' : notice}</p>
+        {!loadError && categories.length === 0 && <p className="rounded border border-dashed p-6">Спочатку створіть категорію, щоб додати продукт. <ScreenLink href="/settings#categories" className="text-link underline">Створити категорію</ScreenLink></p>}
 
-        <section aria-label="Список покупок" aria-busy={pending} className="relative min-w-0 space-y-4">
+        <section aria-label="Список покупок" aria-busy={query.loading} className="relative min-w-0 space-y-4">
           {/* Sticky action stays inside the product section, above its cards. */}
           <div className="sticky top-0 z-20 bg-page py-3">
-            <button ref={newButton} disabled={pending || !!loadError || categories.length === 0} onClick={(event) => { editorTrigger.current = event.currentTarget; setNotice(''); setEditor({ product: null }); }} className="w-full rounded button-primary px-4 py-3 font-medium disabled:opacity-50">Додати продукт</button>
+            <button ref={newButton} disabled={!!loadError || categories.length === 0} onClick={(event) => { editorTrigger.current = event.currentTarget; setNotice(''); setEditor({ product: null }); }} className="w-full rounded button-primary px-4 py-3 font-medium disabled:opacity-50">Додати продукт</button>
           </div>
-        {!loadError && categories.length > 0 && products.length === 0 && <section className="rounded-lg border border-dashed border-line p-8 text-center"><h3 className="font-semibold">{selectedTags.length ? 'Продуктів із вибраними тегами немає' : 'У цій категорії поки немає продуктів'}</h3><p className="mt-2 text-muted">Додайте перший продукт.</p></section>}
-          <div className="product-rows">{!loadError && products.map((product) => <OrderCard key={product.id} product={product} author={authorMap.get(product.id)} pending={pending}
+        {!loadError && categories.length > 0 && products.length === 0 && !query.loading && <section className="rounded-lg border border-dashed border-line p-8 text-center"><h3 className="font-semibold">{selectedTags.length ? 'Продуктів із вибраними тегами немає' : 'У цій категорії поки немає продуктів'}</h3><p className="mt-2 text-muted">Додайте перший продукт.</p></section>}
+          <div className="product-rows">{!loadError && products.map((product) => <OrderCard key={product.id} product={product} author={authorMap.get(product.id)} pending={query.pending.some((operation) => operation.id === product.id)}
             onEdit={(trigger) => { editorTrigger.current = trigger; setNotice(''); setEditor({ product }); }}
             onStatus={() => mutate(product, 'complete')} onDelete={() => { setError(''); setRemoving(product); }} />)}</div>
         </section>
         </div></div>
       </main>
       {/* Separate dialogs for editing and the explicit expense/delete choice. */}
-      {editor && <OrderModal key={editor.product?.id ?? 'new'} workspaceId={workspaceId} product={editor.product}
-        categories={categories} tags={tags} selectedCategory={selectedCategory} onClose={closeEditor}
-        onSaved={() => { setNotice('Продукт збережено.'); closeEditor(); }} />}
-      {removing && <DeleteProductDialog product={removing} pending={pending} error={error}
+      {removing && <DeleteProductDialog product={removing} pending={false} error={error}
         onClose={() => setRemoving(null)} onDelete={() => mutate(removing, 'delete')} onExpense={() => mutate(removing, 'complete')} />}
     </div>
   );

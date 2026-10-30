@@ -1,3 +1,5 @@
+import { readSession } from './server-session';
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from './supabase/server';
 import { getSupabaseConfig } from './supabase/config';
@@ -5,15 +7,14 @@ import { isWorkspaceId } from './products';
 import { accountFromClaims } from './identity';
 
 // Every protected page verifies identity and derives Workspace server-side.
-export async function requireWorkspace() {
+export const requireWorkspace = cache(async () => {
   if (!getSupabaseConfig()) redirect('/login');
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
+  const { client: supabase, data, error } = await readSession();
   if (error || !data?.claims.sub) redirect('/login');
   const { data: workspaces, error: workspaceError } = await supabase.rpc('ensure_personal_workspace');
   if (workspaceError || !workspaces?.[0]) throw new Error('Unable to initialize personal workspace.');
-  return { supabase, workspace: workspaces[0], email: typeof data.claims.email === 'string' ? data.claims.email : '', account: accountFromClaims(data.claims.user_metadata, data.claims.email) };
-}
+  return { supabase, workspace: workspaces[0], email: typeof data.claims.email === 'string' ? data.claims.email : '', userId: data.claims.sub, account: accountFromClaims(data.claims.user_metadata, data.claims.email) };
+});
 
 // Server Actions verify membership independently of UI controls, in addition to RLS.
 export async function workspaceClient(workspaceId: unknown) {

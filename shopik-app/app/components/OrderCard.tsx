@@ -1,4 +1,5 @@
 'use client';
+import { formatMoney } from '@/lib/money';
 
 import type { TaggedProduct } from '@/lib/tags';
 import TagBadge from './TagBadge';
@@ -11,7 +12,7 @@ type Props = {
   author?: ProductAuthor;
   onEdit: (trigger: HTMLElement) => void; onStatus: () => void; onDelete: () => void;
 };
-const money = new Intl.NumberFormat('uk-UA', { style: 'currency', currency: 'UAH' });
+
 
 // Present one persisted product and its explicit edit, completion and delete actions.
 export default function OrderCard({ product, author, pending, onEdit, onStatus, onDelete }: Props) {
@@ -29,10 +30,11 @@ export default function OrderCard({ product, author, pending, onEdit, onStatus, 
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
   return (
-    <article className="product-row">
+    <article className="product-row" aria-busy={pending}>
       <span className="product-symbol" aria-hidden="true">▤</span>
       {/* Product details wrap on narrow screens and for long names. */}
       <div className="min-w-0 space-y-2 break-words [overflow-wrap:anywhere]">
+        {pending && <p role="status" className="text-sm text-muted">Зберігається…</p>}
         <h3 className={`text-lg font-semibold ${completed ? 'text-muted line-through' : ''}`}>{product.name}</h3>
         {product.description && <p className="whitespace-pre-wrap text-muted">{product.description}</p>}
         <ul aria-label="Теги продукту" className="flex flex-wrap gap-2">{product.tags.map((tag) => <li key={tag.id}><TagBadge tag={tag} /></li>)}</ul>
@@ -40,7 +42,7 @@ export default function OrderCard({ product, author, pending, onEdit, onStatus, 
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
       <div className="product-end">
-        <p className="product-price">{money.format(product.price)} <small className="text-muted">UAH</small></p>
+        <p className="product-price">{formatMoney(product.price)} <small className="text-muted">UAH</small></p>
         <div className="mt-2 flex justify-end gap-2">
         {!completed && <button disabled={pending} onClick={onStatus} aria-label={`Завершити ${product.name}`} className="icon-action">✓</button>}
         <div ref={menu} className="product-menu" onKeyDown={(event) => {

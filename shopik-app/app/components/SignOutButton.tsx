@@ -1,12 +1,13 @@
 'use client';
 
 import { useActionState } from 'react';
+import { listCache } from '@/lib/use-list';
 import { signOut } from '@/app/auth/actions';
 
 export default function SignOutButton() {
   const [state, action, pending] = useActionState(signOut, null);
   return (
-    <form action={action}>
+    <form action={action} onSubmit={() => listCache.clear()}>
       <button disabled={pending} className="rounded button-primary px-4 py-2 disabled:opacity-60">
         {pending ? 'Вихід…' : 'Вийти'}
       </button>

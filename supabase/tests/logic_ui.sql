@@ -52,7 +52,7 @@ begin
   begin
     delete from public.categories where id = cid;
     raise exception 'Category with completed product deleted';
-  exception when foreign_key_violation then null; end;
+  exception when foreign_key_violation or restrict_violation then null; end;
 end;
 $$;
 
