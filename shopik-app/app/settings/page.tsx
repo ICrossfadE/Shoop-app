@@ -19,8 +19,8 @@ export default async function SettingsPage() {
   ]);
   return <div className="flex flex-1 flex-col bg-page text-foreground">
     <AppHeader account={account} page="settings" />
-    <main className="mx-auto w-full max-w-3xl space-y-6 px-5 py-6">
-      <h1 className="text-2xl font-semibold">Налаштування акаунта</h1>
+    <main className="app-main space-y-6">
+      <h1 className="font-semibold">Налаштування акаунта</h1>
       {/* Personal account and logout, separate from shared Workspace management. */}
       <section id="account" aria-labelledby="account-title" className="space-y-4 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="account-title" className="text-lg font-semibold">Акаунт</h2>
@@ -29,7 +29,7 @@ export default async function SettingsPage() {
       </section>
       <section id="appearance" aria-labelledby="appearance-title" className="space-y-4 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="appearance-title" className="text-lg font-semibold">Колірна тема</h2>
-        {theme.error ? <div role="alert"><p>Не вдалося завантажити особисту тему.</p><RetryLoad /></div> : <ThemePicker key={theme.userId} initial={theme.theme} />}
+        {theme.error ? <div role="alert"><p>Не вдалося завантажити особисту тему.</p><RetryLoad /></div> : <ThemePicker key={`${theme.userId}:${theme.theme}`} initial={theme.theme} />}
       </section>
       {/* These sections manage shared data in the current Workspace. */}
       <section id="tags" aria-labelledby="settings-tags-title" className="scroll-mt-4 space-y-3">

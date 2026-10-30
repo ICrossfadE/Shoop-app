@@ -58,20 +58,21 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
     <div className="flex flex-1 flex-col bg-page text-foreground">
       {/* Workspace navigation and session controls. */}
       <AppHeader account={account} page="products" />
-      <main className="mx-auto w-full max-w-3xl flex-1 space-y-5 px-5 py-6">
+      <main className="app-main flex-1 space-y-5">
         {/* Categories are persisted independently of the selected product list. */}
         <section className="space-y-3" aria-labelledby="workspace-heading">
-          <h1 className="text-2xl font-semibold">Список покупок</h1>
+          <h1 className="font-semibold">Список покупок</h1>
           <h2 id="workspace-heading" className="text-xl font-semibold">{workspaceName}</h2>
           <p className="break-all text-sm text-muted">{email} · {role === 'owner' ? 'Власник' : 'Учасник'}</p>
-          <nav ref={categoryNav} aria-label="Категорії продуктів" className="flex w-full min-w-0 gap-2 overflow-x-auto py-2">
-            {categories.map((category) => <button key={category.id} title={category.name} disabled={pending} aria-pressed={selectedCategory === category.id}
-              onClick={() => { setError(''); const params = new URLSearchParams({ category: category.id }); selectedTags.forEach((id) => params.append('tag', id)); startTransition(() => router.push(`/?${params}`, { scroll: false })); }}
-              className={`max-w-[85%] shrink-0 whitespace-nowrap overflow-hidden text-ellipsis rounded border px-3 py-2 ${selectedCategory === category.id ? 'bg-blue-600 text-white' : 'bg-surface'}`}>{category.name}</button>)}
-          </nav>
-          <TagFilter tags={tags} selected={selectedTags} action="/" preserved={{ name: 'category', value: selectedCategory }} />
+
 
         </section>
+        <div className="shopping-layout"><aside>          <TagFilter tags={tags} selected={selectedTags} action="/" preserved={{ name: 'category', value: selectedCategory }} /></aside><div className="shopping-content">          <nav ref={categoryNav} aria-label="Категорії продуктів" className="categories flex w-full min-w-0 gap-2 overflow-x-auto py-2">
+            {categories.map((category) => <button key={category.id} title={category.name} disabled={pending} aria-pressed={selectedCategory === category.id}
+              onClick={() => { setError(''); const params = new URLSearchParams({ category: category.id }); selectedTags.forEach((id) => params.append('tag', id)); startTransition(() => router.push(`/?${params}`, { scroll: false })); }}
+              className={`max-w-[85%] shrink-0 whitespace-nowrap overflow-hidden text-ellipsis rounded border px-3 py-2 ${selectedCategory === category.id ? 'button-primary' : 'bg-surface'}`}>{category.name}</button>)}
+          </nav>
+
         {/* Distinguish loading failures, zero categories and an empty category. */}
         {(loadError || error) && <p role="alert" className="rounded bg-danger-surface p-4 text-danger">{loadError || error}</p>}
         {loadError && <button disabled={pending} onClick={() => startTransition(() => router.refresh())} className="rounded border px-3 py-2">Спробувати знову</button>}
@@ -81,13 +82,14 @@ export default function ProductList({ workspaceId, workspaceName, email, role, p
         <section aria-label="Список покупок" aria-busy={pending} className="relative min-w-0 space-y-4">
           {/* Sticky action stays inside the product section, above its cards. */}
           <div className="sticky top-0 z-20 bg-page py-3">
-            <button ref={newButton} disabled={pending || !!loadError || categories.length === 0} onClick={(event) => { editorTrigger.current = event.currentTarget; setNotice(''); setEditor({ product: null }); }} className="w-full rounded bg-blue-600 px-4 py-3 font-medium text-white disabled:opacity-50">Додати продукт</button>
+            <button ref={newButton} disabled={pending || !!loadError || categories.length === 0} onClick={(event) => { editorTrigger.current = event.currentTarget; setNotice(''); setEditor({ product: null }); }} className="w-full rounded button-primary px-4 py-3 font-medium disabled:opacity-50">Додати продукт</button>
           </div>
         {!loadError && categories.length > 0 && products.length === 0 && <section className="rounded-lg border border-dashed border-line p-8 text-center"><h3 className="font-semibold">{selectedTags.length ? 'Продуктів із вибраними тегами немає' : 'У цій категорії поки немає продуктів'}</h3><p className="mt-2 text-muted">Додайте перший продукт.</p></section>}
-          {!loadError && products.map((product) => <OrderCard key={product.id} product={product} author={authorMap.get(product.id)} pending={pending}
+          <div className="product-rows">{!loadError && products.map((product) => <OrderCard key={product.id} product={product} author={authorMap.get(product.id)} pending={pending}
             onEdit={(trigger) => { editorTrigger.current = trigger; setNotice(''); setEditor({ product }); }}
-            onStatus={() => mutate(product, 'complete')} onDelete={() => { setError(''); setRemoving(product); }} />)}
+            onStatus={() => mutate(product, 'complete')} onDelete={() => { setError(''); setRemoving(product); }} />)}</div>
         </section>
+        </div></div>
       </main>
       {/* Separate dialogs for editing and the explicit expense/delete choice. */}
       {editor && <OrderModal key={editor.product?.id ?? 'new'} workspaceId={workspaceId} product={editor.product}

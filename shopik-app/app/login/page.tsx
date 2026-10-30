@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: {
 
   return (
     <main className="flex flex-1 items-center justify-center bg-page px-5 py-12 text-foreground">
-      <section className="w-full max-w-sm space-y-6 rounded-xl bg-surface p-6 shadow">
+      <section className="w-full max-w-sm space-y-6 rounded-[22px] bg-surface p-6 shadow">
         <h1 className="text-3xl font-bold">Shopik</h1>
         <p>Увійдіть, щоб відкрити свій простір покупок.</p>
         {error && <p role="alert" className="text-sm text-danger">Вхід не завершено. Спробуйте ще раз.</p>}

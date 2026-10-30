@@ -33,7 +33,7 @@ export default function TagManager({ workspaceId, tags }: { workspaceId: string;
         <div aria-label="Попередній вигляд тегу"><TagBadge tag={{ name: name.trim() || 'Назва тегу', color }} /></div>
       </fieldset>
       {error && <p role="alert" className="text-danger">{error}</p>}
-      <button disabled={pending} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{pending ? 'Збереження…' : 'Створити тег'}</button>
+      <button disabled={pending} className="rounded button-primary px-4 py-2 disabled:opacity-50">{pending ? 'Збереження…' : 'Створити тег'}</button>
       <p role="status" className="text-sm text-muted">{notice}</p>
     </form>
     {/* Tags exist independently of any product. */}

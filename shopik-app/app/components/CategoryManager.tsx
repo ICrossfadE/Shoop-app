@@ -45,7 +45,7 @@ export default function CategoryManager({ workspaceId, categories }: { workspace
       <label htmlFor="category-name" className="block">{editing ? 'Нова назва категорії' : 'Назва нової категорії'}</label>
       <input id="category-name" required maxLength={120} value={name} disabled={pending} onChange={(event) => setName(event.target.value)} className="w-full rounded border border-line px-3 py-2" />
       <div className="flex flex-wrap gap-2">
-        <button disabled={pending} className="rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-50">{pending ? 'Збереження…' : editing ? 'Перейменувати' : 'Створити категорію'}</button>
+        <button disabled={pending} className="rounded button-primary px-3 py-2 disabled:opacity-50">{pending ? 'Збереження…' : editing ? 'Перейменувати' : 'Створити категорію'}</button>
         {editing && <button type="button" disabled={pending} onClick={() => { setEditing(null); setName(''); }} className="rounded border px-3 py-2">Скасувати</button>}
       </div>
     </form>

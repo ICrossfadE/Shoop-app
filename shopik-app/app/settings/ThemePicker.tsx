@@ -32,7 +32,7 @@ export default function ThemePicker({ initial }: { initial: Theme }) {
   return <div className="space-y-3">
     {/* Two explicit choices keep system appearance from overriding the account. */}
     <div role="group" aria-label="Колірна тема" className="flex flex-wrap gap-3">
-      {(['light', 'dark'] as const).map((theme) => <button key={theme} disabled={pending} aria-pressed={selected === theme} onClick={() => choose(theme)} className={`rounded border px-4 py-3 disabled:opacity-50 ${selected === theme ? 'bg-blue-600 text-white' : 'bg-surface text-foreground border-line'}`}>{theme === 'light' ? 'Світла' : 'Темна'}</button>)}
+      {(['light', 'dark'] as const).map((theme) => <button key={theme} disabled={pending} aria-pressed={selected === theme} onClick={() => choose(theme)} className={`rounded border px-4 py-3 disabled:opacity-50 ${selected === theme ? 'button-primary' : 'bg-surface text-foreground border-line'}`}>{theme === 'light' ? 'Світла' : 'Темна'}</button>)}
     </div>
     {error && <p role="alert" className="text-danger">{error} Натисніть потрібну тему для повторної спроби.</p>}
     <p role="status" className="text-sm text-muted">{pending ? 'Збереження…' : notice}</p>

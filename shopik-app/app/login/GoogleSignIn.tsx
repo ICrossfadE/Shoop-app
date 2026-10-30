@@ -25,7 +25,7 @@ export default function GoogleSignIn() {
 
   return (
     <div className="space-y-3">
-      <button onClick={signIn} disabled={pending} className="w-full rounded bg-blue-600 px-4 py-3 text-white hover:bg-blue-700 disabled:opacity-60">
+      <button onClick={signIn} disabled={pending} className="w-full rounded button-primary px-4 py-3  disabled:opacity-60">
         {pending ? 'Перенаправлення…' : 'Увійти через Google'}
       </button>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}

@@ -23,7 +23,7 @@ export default function DeleteProductDialog({ product, pending, error, onClose, 
     {error && <p role="alert" className="mt-3 text-danger">{error}</p>}
     <div className="mt-5 flex flex-wrap gap-3">
       <button autoFocus disabled={pending} onClick={onClose} className="rounded border px-3 py-2">Скасувати</button>
-      <button disabled={pending} onClick={onExpense} className="rounded bg-green-700 px-3 py-2 text-white">{product.status === 'completed' ? 'Залишити у витратах' : 'Перенести у витрати'}</button>
+      <button disabled={pending} onClick={onExpense} className="rounded button-neutral px-3 py-2 text-white">{product.status === 'completed' ? 'Залишити у витратах' : 'Перенести у витрати'}</button>
       <button disabled={pending} onClick={onDelete} className="rounded bg-red-700 px-3 py-2 text-white">Видалити</button>
     </div>
     {pending && <p role="status" className="mt-3">Збереження…</p>}
