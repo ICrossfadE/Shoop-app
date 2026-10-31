@@ -5,7 +5,8 @@ import type { TaggedProduct } from "@/lib/tags";
 import TagBadge from "./TagBadge";
 import AuthorInfo from "./AuthorInfo";
 import type { ProductAuthor } from "@/lib/identity";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
+import { createPortal } from 'react-dom';
 
 type Props = {
   product: TaggedProduct;
@@ -33,18 +34,36 @@ export default function OrderCard({
     day.format(new Date(product.created_at)) === day.format(new Date());
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   // Close outside the menu, restoring keyboard focus on Escape.
   useEffect(() => {
     if (!open) return;
-    menu.current?.querySelector("button")?.focus();
+    panel.current?.querySelector("button")?.focus();
     function outside(event: PointerEvent) {
-      if (!menu.current?.contains(event.target as Node)) setOpen(false);
+      if (!menu.current?.contains(event.target as Node) && !panel.current?.contains(event.target as Node)) setOpen(false);
     }
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);
+  // The native top layer escapes overflow and card stacking contexts; flip above at the bottom edge.
+  useLayoutEffect(() => {
+    if (!open || !panel.current || !trigger.current) return;
+    const element = panel.current;
+    element.showPopover();
+    const place = () => {
+      const anchor = trigger.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const height = element.getBoundingClientRect().height;
+      element.style.left = `${Math.max(8, Math.min(anchor.right - element.offsetWidth, window.innerWidth - element.offsetWidth - 8))}px`;
+      element.style.top = `${Math.max(8, anchor.bottom + height + 8 <= window.innerHeight ? anchor.bottom + 4 : anchor.top - height - 4)}px`;
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { element.hidePopover();window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true); };
+  },[open]);
   return (
     <article
       className={`product-row relative ${isToday ? "product-today" : ""}`}
@@ -119,7 +138,7 @@ export default function OrderCard({
               if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 event.preventDefault();
                 const buttons = Array.from(
-                  menu.current?.querySelectorAll<HTMLButtonElement>(
+                  panel.current?.querySelectorAll<HTMLButtonElement>(
                     "[data-menu-action]",
                   ) ?? [],
                 );
@@ -134,7 +153,7 @@ export default function OrderCard({
               }
             }}
             onBlur={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget))
+              if (!event.currentTarget.contains(event.relatedTarget) && !panel.current?.contains(event.relatedTarget))
                 setOpen(false);
             }}
           >
@@ -149,10 +168,14 @@ export default function OrderCard({
             >
               ⋯
             </button>
-            {open && (
+            {open && createPortal((
               <div
+                ref={panel}
+                popover="auto"
+                onToggle={event=>{if(event.newState==='closed')setOpen(false);}}
                 id={menuId}
                 className="product-menu-panel"
+                style={{position:'fixed',inset:'auto',margin:0,maxWidth:'calc(100vw - 16px)',maxHeight:'calc(100dvh - 16px)',overflowY:'auto'}}
                 aria-label="Дії продукту"
               >
                 {!completed && (
@@ -180,7 +203,7 @@ export default function OrderCard({
                   Видалити
                 </button>
               </div>
-            )}
+            ),document.body)}
           </div>}
         </div>
       </div>

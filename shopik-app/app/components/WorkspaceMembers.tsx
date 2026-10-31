@@ -1,27 +1,23 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, useTransition } from 'react';
-import { readWorkspacePeople, removeWorkspaceMember, selectWorkspace } from '../settings/workspace-actions';
-import type { WorkspaceOption, WorkspacePerson } from '@/lib/members';
+import { readWorkspacePeople, removeWorkspaceMember } from '../settings/workspace-actions';
+import type { WorkspacePerson } from '@/lib/members';
 import { listCache } from '@/lib/use-list';
 import WorkspaceInvites from './WorkspaceInvites';
 import Avatar from './Avatar';
 
 // Manage existing memberships; invitation delivery remains a separate feature.
 export default function WorkspaceMembers({workspaceId,userId,onRemoved,active=true}:{workspaceId:string;userId:string;onRemoved:()=>void;active?:boolean}) {
-  const router=useRouter();
   const [people,setPeople]=useState<WorkspacePerson[]>([]);
-  const [options,setOptions]=useState<WorkspaceOption[]>([]);
   const [error,setError]=useState('');
   const [loaded,setLoaded]=useState(false);
   const [pending,startTransition]=useTransition();
   const [notice,setNotice]=useState('');
-  const [selected,setSelected]=useState(workspaceId);
   const refresh=useCallback(async()=>{
     const result=await readWorkspacePeople(workspaceId);
     if(listCache.owner!==userId) return;
     if(!result.ok){setError(result.error);if(result.accessLost){await listCache.clear();window.location.replace('/login');}return;}
-    setPeople(result.people);setOptions(result.options);setError('');setLoaded(true);
+    setPeople(result.people);setError('');setLoaded(true);
   },[workspaceId,userId]);
   // Refresh membership when settings are visible, without polling a hidden mounted form.
   useEffect(()=>{if(!active)return;const update=()=>{if(document.visibilityState==='visible')void refresh();};const timer=window.setTimeout(update,0);const poll=window.setInterval(update,30000);window.addEventListener('focus',update);window.addEventListener('online',update);document.addEventListener('visibilitychange',update);return()=>{window.clearTimeout(timer);window.clearInterval(poll);window.removeEventListener('focus',update);window.removeEventListener('online',update);document.removeEventListener('visibilitychange',update);};},[refresh,active]);
@@ -37,8 +33,6 @@ export default function WorkspaceMembers({workspaceId,userId,onRemoved,active=tr
     });
   }
   return <div className="space-y-4">
-    {/* Selection is restricted to current memberships and reloads the authenticated shell. */}
-    {options.length>1&&<div className="flex flex-wrap items-end gap-2"><div><label htmlFor="workspace-choice" className="block">Поточний простір</label><select id="workspace-choice" className="rounded border p-2" value={selected} disabled={pending} onChange={event=>setSelected(event.target.value)}>{options.map(option=><option value={option.id} key={option.id}>{option.name}</option>)}</select></div><button className="button-primary px-3 py-2" disabled={pending||selected===workspaceId} onClick={()=>startTransition(async()=>{const result=await selectWorkspace(selected);if(!result.ok){setError(result.error);return;}listCache.clear();router.refresh();})}>Відкрити простір</button></div>}
     {!loaded&&!error&&<p role="status">Завантажуємо учасників…</p>}
     {error&&<p role="alert" className="text-danger">{error} <button onClick={()=>void refresh()} disabled={pending}>Спробувати знову</button></p>}
     <p role="status">{notice}</p>

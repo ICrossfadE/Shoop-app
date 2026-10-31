@@ -30,7 +30,7 @@ const jwt = unsigned + '.' + crypto.sign('sha256', Buffer.from(unsigned), keypai
 const user = { id: uid, aud: 'authenticated', role: 'authenticated', email: claims.email, user_metadata: claims.user_metadata, app_metadata: { provider: 'google' } };
 const session = { access_token: jwt, refresh_token: 'fixture-only', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user };
 let oauthSession=session;
-let db, stats = [], wid, cid, homeId, failKind = '', loseKind = '', delay = 60, server;
+let db, stats = [], wid, cid, homeId, failKind = '', loseKind = '', delay = 60, server, failPeople=false;
 async function database(baseline) {
     if (db)
         await db.close();
@@ -79,6 +79,7 @@ async function startMock() {
                     const name = url.pathname.split('/').pop();
                     if (!/^[a-z_]+$/.test(name))
                         throw Error('bad fn');
+                    if(failPeople && name==='workspace_people')throw Error('Fixture people unavailable');
                     if (failKind && body.p_kind === failKind) {
                         failKind = '';
                         const e = new Error('Fixture denied');
@@ -175,7 +176,7 @@ async function mainInvites(){
    page.on('request',request=>{if(secrets.some(token=>request.url().includes(token)||Object.entries(request.headers()).some(([key,value])=>key==='referer'&&value.includes(token))))leakedUrl=true;});
    await page.route(realUrl+'/**',async route=>{
     if(route.request().url().includes('/auth/v1/authorize')){
-      const authUrl=new URL(route.request().url());assert.equal(authUrl.searchParams.get('redirect_to'),'http://127.0.0.1:3191/auth/callback?flow=invite');
+      const authUrl=new URL(route.request().url());assert.ok(['http://127.0.0.1:3191/auth/callback?flow=invite','http://127.0.0.1:3191/auth/callback?flow=personal'].includes(authUrl.searchParams.get('redirect_to')));
       await route.fulfill({body:'<!doctype html><title>Isolated OAuth fixture</title>',contentType:'text/html'});return;
     }
     const response=await route.fetch({url:route.request().url().replace(realUrl,'http://127.0.0.1:3190')});await route.fulfill({response});
@@ -269,7 +270,11 @@ async function mainInvites(){
   await owner.getByRole('status').filter({hasText:'Стан запрошення оновлено'}).waitFor();
   assert.equal(leakedUrl,false,'Invitation secret appeared in network URL/referrer');
   assert.deepEqual(errors,[]);
-  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,isolated:true,layouts,oauth:'local token-exchange fixture, not hosted Google',scenarios:['owner create/copy fallback/list/revoke','fragment scrub and private cookie','OAuth denial and fixed continuation','explicit member acceptance and workspace selection','existing member does not consume','used/revoked/invalid','network retry','no token in IndexedDB or network URL/referrer']},null,2));
+  if(process.env.SHOPIK_CHECK_WORKSPACES){
+    const {checkWorkspaces}=await import('./check-workspaces.mjs');
+    await checkWorkspaces({db,owner,member:anonymous,other,wid,joinerId,uid,output,pageFor,sessionFor,setOAuth:value=>{oauthSession=value;},setPeopleFailure:value=>{failPeople=value;}});
+  }
+  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,isolated:true,layouts,workspaces:!!process.env.SHOPIK_CHECK_WORKSPACES,oauth:'local token-exchange fixture, not hosted Google',scenarios:['owner create/copy fallback/list/revoke','fragment scrub and private cookie','OAuth denial and fixed continuation','explicit member acceptance and workspace selection','existing member does not consume','used/revoked/invalid','network retry','no token in IndexedDB or network URL/referrer']},null,2));
   console.log('PASS: invitation production flow, isolated OAuth continuation, owner controls, private context, retries, 24 theme/width layouts and preserved permissions');
  }catch(error){fs.writeFileSync(path.join(output,'server.log'),logs);throw error;}
  finally{await browser?.close();child.kill();await new Promise(resolve=>server.close(resolve));await db.close();}

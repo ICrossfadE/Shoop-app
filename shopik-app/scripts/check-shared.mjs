@@ -218,6 +218,7 @@ async function runShared(){
   assert.equal(Number(after),Number(before)+15);
   await target.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await target.waitForURL('**/login');
+  await target.getByRole('heading',{name:'Shopik',exact:true}).waitFor();
   const retained=await target.evaluate(()=>new Promise(resolve=>{const r=indexedDB.open('shopik-local',1);r.onsuccess=()=>{const d=r.result;const q=d.transaction('records').objectStore('records').getAll();q.onsuccess=()=>{resolve(q.result);d.close();};};}));
   assert.equal(retained.some(record=>record.owner===targetId),false);
   await owner.goto('http://127.0.0.1:3191/expenses');
@@ -232,11 +233,13 @@ async function runShared(){
   await assert.rejects(asUser(uid,'select public.remove_workspace_member($1,$2,$3)',[wid,targetId,joined]));
   // Switch only among actual memberships; the cookie alone must never grant access.
   await target.goto('http://127.0.0.1:3191/settings');
-  const chooser=target.locator('#workspace-choice');await chooser.waitFor();
-  const privateId=await chooser.locator('option').evaluateAll((items,current)=>items.find(item=>item.value!==current)?.value,wid);
-  assert.ok(privateId);await chooser.selectOption(privateId);
-  await target.getByRole('button',{name:'Відкрити простір',exact:true}).click();
-  await target.waitForFunction(id=>document.querySelector('#workspace-choice')?.value===id,privateId);
+  const spaces=target.locator('#workspaces');
+  const personal=spaces.locator('li').filter({hasText:'Мій особистий простір'});
+  await personal.waitFor();
+  await personal.getByRole('button',{name:'Відкрити простір',exact:true}).click();
+  await personal.getByText('Поточний',{exact:true}).waitFor();
+  const privateId=(await target.context().cookies()).find(cookie=>cookie.name==='shopik-workspace')?.value;
+  assert.ok(privateId);assert.notEqual(privateId,wid);
   await target.waitForFunction(()=>document.querySelectorAll('#members li').length===1);
   const cookies=await target.context().cookies();assert.equal(cookies.find(cookie=>cookie.name==='shopik-workspace')?.value,privateId);
   await target.goto('http://127.0.0.1:3191/');

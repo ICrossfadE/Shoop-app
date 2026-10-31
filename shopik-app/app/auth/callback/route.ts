@@ -2,6 +2,7 @@ import { authDestination } from '@/lib/invites';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 import { createClient } from '@/lib/supabase/server';
+import { selectPersonalWorkspace } from '@/lib/server-workspaces';
 
 export async function GET(request: NextRequest) {
   const destination=authDestination(request.nextUrl.searchParams.get('flow'));
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest) {
       const supabase = await createClient(true);
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (!error) {
+        // A deliberate personal login overrides a remembered shared selection.
+        if (request.nextUrl.searchParams.get('flow') === 'personal') await selectPersonalWorkspace(supabase);
         const response = new NextResponse(null,{status:307,headers:{Location:destination}});
         response.headers.set('Cache-Control', 'private, no-store');
         return response;

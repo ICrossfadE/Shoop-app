@@ -5,24 +5,46 @@ import { createClient } from '@/lib/supabase/server';
 import { workspaceClient } from '@/lib/workspace';
 import { isWorkspaceId } from '@/lib/products';
 import { workspaceCookie, type WorkspaceOption, type WorkspacePerson } from '@/lib/members';
+import { selectPersonalWorkspace } from '@/lib/server-workspaces';
+
+// Workspace discovery works independently of the currently selected space's people endpoint.
+export async function listWorkspaces(): Promise<{ok:true; options: WorkspaceOption[]}|{ok:false; error:string}> {
+  try {
+    const client = await createClient(true);
+    const session = await client.auth.getClaims();
+    if (session.error || !session.data?.claims.sub) return {ok:false,error:'Увійдіть знову.'};
+    const [members, spaces] = await Promise.all([
+      client.from('workspace_members').select('workspace_id,role').eq('user_id',session.data.claims.sub),
+      client.from('workspaces').select('id,name,owner_id,is_personal'),
+    ]);
+    if (members.error || spaces.error) throw new Error('Workspace list unavailable');
+    const options = (spaces.data ?? []).flatMap(space => {
+      const member = members.data?.find(item => item.workspace_id === space.id);
+      return member ? [{id:space.id,name:space.name,role:member.role,personal:space.is_personal && space.owner_id === session.data!.claims.sub}] : [];
+    }).sort((a,b)=>Number(b.personal)-Number(a.personal)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
+    return {ok:true,options};
+  } catch { return {ok:false,error:'Не вдалося завантажити простори. Перевірте підключення.'}; }
+}
+
+// Used both to recover missing personal space and explicitly open an existing one.
+export async function openPersonalWorkspace(): Promise<{ok:true}|{ok:false;error:string}> {
+  try {
+    const client = await createClient(true);
+    const session = await client.auth.getClaims();
+    if (session.error || !session.data?.claims.sub) return {ok:false,error:'Увійдіть знову.'};
+    await selectPersonalWorkspace(client);
+    return {ok:true};
+  } catch { return {ok:false,error:'Не вдалося відкрити особистий простір. Перевірте підключення та міграції Supabase.'}; }
+}
 
 // Membership and public people are verified afresh; no role is accepted from the client.
-export async function readWorkspacePeople(workspaceId: string): Promise<{ok:true; people:WorkspacePerson[]; options:WorkspaceOption[]} | {ok:false; error:string; accessLost?:boolean}> {
+export async function readWorkspacePeople(workspaceId: string): Promise<{ok:true; people:WorkspacePerson[]} | {ok:false; error:string; accessLost?:boolean}> {
   try {
     const client = await workspaceClient(workspaceId);
     if (!client) return {ok:false,error:'Немає доступу до простору.',accessLost:true};
-    const session = await client.auth.getClaims();
-    const [people, memberships, spaces] = await Promise.all([
-      client.rpc('workspace_people',{p_workspace_id:workspaceId}),
-      client.from('workspace_members').select('workspace_id,role').eq('user_id',session.data!.claims.sub!),
-      client.from('workspaces').select('id,name'),
-    ]);
-    if (people.error || memberships.error || spaces.error) return {ok:false,error:'Не вдалося завантажити учасників і простори.'};
-    const options = (spaces.data ?? []).flatMap((space) => {
-      const membership=memberships.data?.find((item)=>item.workspace_id===space.id);
-      return membership ? [{...space,role:membership.role}] : [];
-    });
-    return {ok:true,people:people.data ?? [],options};
+    const people = await client.rpc('workspace_people',{p_workspace_id:workspaceId});
+    if (people.error) return {ok:false,error:'Не вдалося завантажити учасників.'};
+    return {ok:true,people:people.data ?? []};
   } catch { return {ok:false,error:'Не вдалося оновити простір. Перевірте підключення.'}; }
 }
 

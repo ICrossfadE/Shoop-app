@@ -76,5 +76,15 @@ try{
  const limited=await Promise.all(parallel.map(client=>asUser(client,loser,'select public.accept_workspace_invite($1) value',['Z'.repeat(43)])));
  assert.equal(limited.filter(r=>r.rows[0].value.status==='limited').length,2);
  console.log('PASS independent connections: durable accept budget cannot be raced past its limit');
+ // First login can race across tabs after an invitation; only one personal workspace may result.
+ const freshUser=crypto.randomUUID();
+ await admin.query('insert into auth.users(id,email) values($1,$2)',[freshUser,'parallel-personal@example.invalid']);
+ await admin.query("insert into public.workspace_members(workspace_id,user_id,role) values($1,$2,'member')",[wid,freshUser]);
+ const homes=await Promise.all(parallel.map(client=>asUser(client,freshUser,'select * from public.ensure_personal_workspace()')));
+ assert.equal(new Set(homes.map(r=>r.rows[0].workspace_id)).size,1);
+ assert.ok(homes.every(r=>r.rows[0].member_role==='owner'&&r.rows[0].workspace_id!==wid));
+ assert.equal((await admin.query('select count(*)::int n from public.workspaces where owner_id=$1 and is_personal',[freshUser])).rows[0].n,1);
+ assert.equal((await admin.query('select role from public.workspace_members where workspace_id=$1 and user_id=$2',[wid,freshUser])).rows[0].role,'member');
+ console.log('PASS independent connections: 12 invited-first personal initializations create exactly one owner workspace');
 }catch(error){console.error(error.message);process.exitCode=1;}
 finally{await Promise.allSettled(clients.map(c=>c.end()));if(server){try{await execute('pg_ctl',['-D',data,'stop','-m','immediate','-w']);}catch{server.kill();}}}

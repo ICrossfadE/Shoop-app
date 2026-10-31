@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Resolve shared image URLs against the stable production domain on Vercel.
+  metadataBase: new URL(process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000'),
   title: "Shopik",
   description: "Спільний список покупок",
 };

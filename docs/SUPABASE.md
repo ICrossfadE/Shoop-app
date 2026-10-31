@@ -112,3 +112,11 @@ Hosted Supabase не змінювався. Актуальний звіт і ме
 4. Google Cloud redirect URI залишається Supabase Auth callback; app marker додається в redirectTo бібліотеки Supabase, не містить invite-токена. Сам секрет передається спочатку в URL fragment, далі тільки в HttpOnly cookie `/invite` на 30 хвилин. HTTPS у production обов'язковий для Secure cookie. Callback застосунку використовує відносні allowlisted Location, щоб reverse proxy не підмінив публічний домен внутрішнім localhost.
 5. Розгорнути код і схему узгоджено, перевірити реальними Google-акаунтами створення/вхід/відмову/зміну акаунта/прийняття/вибір простору/відкликання/виключення/новий інвайт. Не відкривати shopik_private через exposed schemas й не використовувати service_role у браузері.
 Нових env secrets для створення інвайтів не потрібно: токен криптографічно випадковий, у базі тільки SHA256. Звіт та ліміти: `docs/testing/015-invites/README.md`. Hosted Supabase і його allowlist агентом не змінювалися.
+
+## Етап 016 — особистий простір і перемикання
+
+Після 011 застосувати лише нову `supabase/migrations/202610310012_personal_workspace_recovery.sql`. Номер міграції 012 відповідає задачі 016. Старі міграції не повторювати. Виконати весь `supabase/tests/personal_workspace.sql` (ROLLBACK) на тестовій копії цільової схеми.
+
+У Supabase Authentication → URL Configuration додати точний production callback `https://ВАШ-ДОМЕН/auth/callback?flow=personal` та відповідний dev callback. Зберегти звичайний `/auth/callback` і `?flow=invite`. Site URL має бути публічним production-доменом. Callback Google Cloud залишається Supabase `/auth/v1/callback`.
+
+Поле запрошення приймає тільки посилання з поточного origin застосунку. Після зміни домену створювати посилання на новому публічному домені; старі домени автоматично не довіряються. Змін Supabase/Google/Vercel агент не застосовував. Фактичний набір hosted-міграцій й реальний OAuth після змін потребують перевірки: локальні SQL та OAuth fixture цього не підтверджують. Звіт: `docs/testing/016-workspaces/README.md`.

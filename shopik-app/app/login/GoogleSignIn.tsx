@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 // Google OAuth retains the configured callback and error handling.
-export default function GoogleSignIn({invitation=false,chooseAccount=false}:{invitation?:boolean;chooseAccount?:boolean}) {
+export default function GoogleSignIn({invitation=false,chooseAccount=false,personal=false}:{invitation?:boolean;chooseAccount?:boolean;personal?:boolean}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,7 +16,7 @@ export default function GoogleSignIn({invitation=false,chooseAccount=false}:{inv
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback${invitation?'?flow=invite':''}`, ...(chooseAccount?{queryParams:{prompt:'select_account'}}:{}) },
+        options: { redirectTo: `${window.location.origin}/auth/callback${invitation?'?flow=invite':personal?'?flow=personal':''}`, ...(chooseAccount?{queryParams:{prompt:'select_account'}}:{}) },
       });
       if (error) throw error;
     } catch {

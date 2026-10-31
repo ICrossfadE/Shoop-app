@@ -2,6 +2,7 @@
 import type { WorkspaceBoot } from '@/lib/workspace-boot';
 import type { MutationData } from '@/lib/list-model';
 import WorkspaceMembers from './WorkspaceMembers';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Avatar from './Avatar';
 import SignOutButton from './SignOutButton';
 import RetryLoad from './RetryLoad';
@@ -27,6 +28,7 @@ export default function SettingsPanel({ boot, onChange, active=true }: { active?
         <h2 id="appearance-title" className="text-lg font-semibold">Колірна тема</h2>
         {theme.error ? <div role="alert"><p>Не вдалося завантажити особисту тему.</p><RetryLoad /></div> : <ThemePicker />}
       </section>
+      <WorkspaceSwitcher key={workspace.workspace_id} workspaceId={workspace.workspace_id} active={active}/>
       {/* These sections manage shared data in the current Workspace. */}
       <section id="tags" aria-labelledby="settings-tags-title" className="settings-wide scroll-mt-4 space-y-3 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="settings-tags-title" className="text-lg font-semibold">Теги</h2><p className="text-sm text-muted">Простір: {workspace.workspace_name}</p>
