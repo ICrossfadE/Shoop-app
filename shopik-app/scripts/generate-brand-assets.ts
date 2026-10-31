@@ -36,9 +36,9 @@ try {
   }
   await render(1200, 630, 180, 'app/opengraph-image.png');
   await render(512, 512, 110, 'app/icon.png');
-  // ICO embeds PNG frames so browsers can select a native favicon size.
+  // ICO embeds RGBA PNG frames: Turbopack's ICO decoder requires an alpha channel.
   const sizes = [16, 32, 48, 64, 256];
-  const frames: Buffer[] = await Promise.all(sizes.map(size => sharp('app/icon.png').resize(size, size).png().toBuffer()));
+  const frames: Buffer[] = await Promise.all(sizes.map(size => sharp('app/icon.png').resize(size, size).ensureAlpha().png().toBuffer()));
   const directory = Buffer.alloc(6 + sizes.length * 16);
   directory.writeUInt16LE(1, 2);
   directory.writeUInt16LE(sizes.length, 4);
