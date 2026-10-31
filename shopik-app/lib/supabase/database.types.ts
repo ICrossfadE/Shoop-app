@@ -39,6 +39,12 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      create_workspace_invite: { Args: {p_workspace_id:string;p_operation_id:string;p_token_hash:string}; Returns:import('../invites').InviteCreateResult };
+      list_workspace_invites: { Args:{p_workspace_id:string};Returns:import('../invites').InviteListResult };
+      revoke_workspace_invite: { Args:{p_invite_id:string};Returns:{status:'ok';invite:import('../invites').InviteSummary}|{status:'invalid'|'limited'} };
+      preview_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
+      accept_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
+
       workspace_people: { Args: { p_workspace_id: string }; Returns: import('../members').WorkspacePerson[] };
       remove_workspace_member: { Args: { p_workspace_id: string; p_user_id: string; p_joined_at: string }; Returns: undefined };
 

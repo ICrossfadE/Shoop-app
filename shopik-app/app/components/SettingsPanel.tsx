@@ -10,7 +10,7 @@ import TagManager from '../tags/TagManager';
 import ThemePicker from '../settings/ThemePicker';
 
 // Shared bootstrap makes settings available without a page roundtrip.
-export default function SettingsPanel({ boot, onChange }: { boot: WorkspaceBoot; onChange: (change: MutationData) => void }) {
+export default function SettingsPanel({ boot, onChange, active=true }: { active?:boolean; boot: WorkspaceBoot; onChange: (change: MutationData) => void }) {
   const { workspace, account, email, theme } = boot;
   const tags = { data: boot.tags, error: boot.tagsError };
   const categories = { data: boot.categories, error: boot.categoriesError };
@@ -39,7 +39,7 @@ export default function SettingsPanel({ boot, onChange }: { boot: WorkspaceBoot;
       {/* Existing Workspace members and owner-only removal are distinct from account logout. */}
       <section id="members" className="settings-wide space-y-3 rounded-lg bg-surface p-5 shadow-sm" aria-labelledby="members-title">
         <h2 id="members-title" className="text-lg font-semibold">Учасники простору</h2><p className="text-sm text-muted">{workspace.workspace_name}</p>
-        <WorkspaceMembers workspaceId={workspace.workspace_id} userId={boot.userId} onRemoved={()=>onChange({workspaceChanged:true})}/>
+        <WorkspaceMembers active={active} workspaceId={workspace.workspace_id} userId={boot.userId} onRemoved={()=>onChange({workspaceChanged:true})}/>
       </section>
     </main>
   </div>;

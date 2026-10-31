@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "isolated": true,
+  "layouts": 24,
+  "oauth": "local token-exchange fixture, not hosted Google",
+  "scenarios": [
+    "owner create/copy fallback/list/revoke",
+    "fragment scrub and private cookie",
+    "OAuth denial and fixed continuation",
+    "explicit member acceptance and workspace selection",
+    "existing member does not consume",
+    "used/revoked/invalid",
+    "network retry",
+    "no token in IndexedDB or network URL/referrer"
+  ]
+}

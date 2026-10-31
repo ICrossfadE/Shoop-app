@@ -91,6 +91,6 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
       : screen === 'expenses' ? <ExpenseList membershipVersion={boot.membershipVersion} userId={boot.userId} workspace={boot.workspace} tags={metadata.tags} initialFilter={boot.initialFilter.kind === 'expenses' ? boot.initialFilter : { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] }}
         initial={boot.initialFilter.kind === 'expenses' ? boot.initial : undefined} loadError={metadata.tagsError} />
       : null}
-    <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel boot={metadata} onChange={changed} /></div>
+    <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel active={screen==='settings'} boot={metadata} onChange={changed} /></div>
   </div>;
 }
