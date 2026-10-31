@@ -1,13 +1,14 @@
 'use client';
+import { localStore } from './local-store';
 import { useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { AccessError, QueryCache } from './query-cache';
 import { listKey, type ListData, type ListFilter, type MutationResult } from './list-model';
 
-export const listCache = new QueryCache();
+export const listCache = new QueryCache(30_000, () => Date.now(), localStore);
 // A revoked Workspace must not leave private snapshots or drafts visible.
 export function discardDeniedAccess(result: MutationResult) {
-  if (!result.ok && result.accessLost) { listCache.clear(); window.location.replace('/login'); return true; }
+  if (!result.ok && result.accessLost) { void Promise.resolve(listCache.clear()).then(() => window.location.replace('/login')); return true; }
   return false;
 }
 export const navigateList = (url: string) => window.history.pushState(null, '', url);
@@ -23,7 +24,7 @@ export async function readList(workspaceId: string, filter: ListFilter): Promise
 }
 
 // SSR uses only the supplied initial data. Memory is populated after hydration.
-export function useList(userId: string, workspaceId: string, filter: ListFilter, initialFilter: ListFilter, initial?: ListData) {
+export function useList(userId: string, workspaceId: string, filter: ListFilter, initialFilter: ListFilter, initial?: ListData, membershipVersion?: string) {
   const scope = `${userId}:${workspaceId}`;
   const key = listKey(scope, filter), initialKey = listKey(scope, initialFilter);
   const router = useRouter();
@@ -31,11 +32,12 @@ export function useList(userId: string, workspaceId: string, filter: ListFilter,
   const generation = listCache.entry(scope, filter)?.generation ?? 0;
   useEffect(() => {
     listCache.activate(userId);
+    listCache.prepare(scope,membershipVersion);
     if (initial) listCache.seed(scope, initialFilter, initial);
     listCache.emit();
     // All dependencies are represented by the normalized keys below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, scope, initialKey]);
+  }, [userId, scope, initialKey, membershipVersion]);
   useEffect(() => {
     let active = true;
     const read = () => readList(workspaceId, filter);

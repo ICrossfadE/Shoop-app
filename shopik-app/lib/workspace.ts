@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+import { workspaceCookie } from './members';
 import { readSession } from './server-session';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
@@ -13,7 +15,19 @@ export const requireWorkspace = cache(async () => {
   if (error || !data?.claims.sub) redirect('/login');
   const { data: workspaces, error: workspaceError } = await supabase.rpc('ensure_personal_workspace');
   if (workspaceError || !workspaces?.[0]) throw new Error('Unable to initialize personal workspace.');
-  return { supabase, workspace: workspaces[0], email: typeof data.claims.email === 'string' ? data.claims.email : '', userId: data.claims.sub, account: accountFromClaims(data.claims.user_metadata, data.claims.email) };
+  // A remembered Workspace is only a preference; current RLS membership decides access.
+  let workspace = workspaces[0];
+  let revokedWorkspaceId: string | undefined;
+  const selected = (await cookies()).get(workspaceCookie)?.value;
+  if (isWorkspaceId(selected) && selected !== workspace.workspace_id) {
+    const member = await supabase.from('workspace_members').select('role').eq('workspace_id', selected).eq('user_id', data.claims.sub).maybeSingle();
+    if (!member.error && !member.data) revokedWorkspaceId = selected;
+    const shared = member.data && !member.error ? await supabase.from('workspaces').select('id,name').eq('id',selected).maybeSingle() : null;
+    if (shared?.data && !shared.error) workspace = {workspace_id:shared.data.id,workspace_name:shared.data.name,member_role:member.data!.role};
+  }
+  const membership=await supabase.from('workspace_members').select('created_at').eq('workspace_id',workspace.workspace_id).eq('user_id',data.claims.sub).single();
+  if(membership.error||!membership.data) throw new Error('Workspace membership unavailable');
+  return { supabase, workspace, membershipVersion:membership.data.created_at, revokedWorkspaceId, email: typeof data.claims.email === 'string' ? data.claims.email : '', userId: data.claims.sub, account: accountFromClaims(data.claims.user_metadata, data.claims.email) };
 });
 
 // Server Actions verify membership independently of UI controls, in addition to RLS.

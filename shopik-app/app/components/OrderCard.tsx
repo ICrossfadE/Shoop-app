@@ -10,6 +10,7 @@ import { useEffect, useId, useRef, useState } from "react";
 type Props = {
   product: TaggedProduct;
   pending: boolean;
+  canManage?: boolean;
   author?: ProductAuthor;
   onEdit: (trigger: HTMLElement) => void;
   onStatus: () => void;
@@ -19,6 +20,7 @@ type Props = {
 // Present one persisted product and its explicit edit, completion and delete actions.
 export default function OrderCard({
   product,
+  canManage = false,
   author,
   pending,
   onEdit,
@@ -105,7 +107,7 @@ export default function OrderCard({
               ✓
             </button>
           )}
-          <div
+          {canManage && <div
             ref={menu}
             className="product-menu"
             onKeyDown={(event) => {
@@ -179,7 +181,7 @@ export default function OrderCard({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </article>

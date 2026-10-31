@@ -1,25 +1,14 @@
 'use client';
-import { useState, useTransition } from 'react';
-import { saveTheme } from '../settings/actions';
-
-// Use the same profile/cookie action as settings, with rollback on failure.
+import { isTheme, themes, themeLabels } from '@/lib/theme';
+import { useTheme } from './ThemeProvider';
+// Native select keeps six palettes compact with built-in keyboard and Escape behavior.
 export default function ThemeToggle() {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState('');
-  function toggle() {
-    const root = document.documentElement;
-    const previous = root.dataset.theme === 'dark' ? 'dark' : 'light';
-    const next = previous === 'dark' ? 'light' : 'dark';
-    setError('');
-    root.dataset.theme = next; root.style.colorScheme = next;
-    startTransition(async () => {
-      try {
-        const result = await saveTheme(next);
-        if (result.ok) return;
-        setError(result.error);
-      } catch { setError('Не вдалося зберегти тему.'); }
-      root.dataset.theme = previous; root.style.colorScheme = previous;
-    });
-  }
-  return <div><button className="icon-action" aria-label="Перемкнути світлу / темну тему" disabled={pending} onClick={toggle}>◐</button>{error && <p role="alert" className="max-w-48 text-sm text-danger">{error}</p>}</div>;
+  const { selected, pending, error, choose } = useTheme();
+  return <div className="header-theme">
+    <label className="sr-only" htmlFor="header-theme">Колірна тема</label>
+    <select id="header-theme" value={selected} disabled={pending} aria-busy={pending} onChange={(event) => { if (isTheme(event.target.value)) choose(event.target.value); }}>
+      {themes.map((theme) => <option key={theme} value={theme}>{themeLabels[theme]}</option>)}
+    </select>
+    {error && <p role="alert" className="max-w-48 text-sm text-danger">{error}</p>}
+  </div>;
 }

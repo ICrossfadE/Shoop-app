@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "scenario": "shared-permissions",
+  "isolated": true,
+  "screenshots": 3
+}

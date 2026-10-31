@@ -5,7 +5,7 @@ import type { ExpenseMonth } from './expenses';
 
 export type ListFilter = { kind: 'products' | 'expenses'; category: string; tags: string[]; month: string };
 export type ListData = { products: TaggedProduct[]; authors: ProductAuthor[]; expenses: ExpenseMonth | null };
-export type MutationData = { product?: TaggedProduct; author?: ProductAuthor; category?: Category; tag?: Tag; deleted?: string };
+export type MutationData = { workspaceChanged?: boolean; product?: TaggedProduct; author?: ProductAuthor; category?: Category; tag?: Tag; deleted?: string };
 export type MutationResult = { ok: true; data: MutationData } | { ok: false; error: string; ambiguous?: boolean; accessLost?: boolean; fields?: import('./products').ProductErrors };
 export type ProductDraft = { trigger?: HTMLElement; key: string; scope: string; userId: string; workspaceId: string; product: TaggedProduct | null; categories: Category[]; tags: Tag[]; selectedCategory: string };
 export type FailedMutation = { operationId: string; scope: string; workspaceId: string; id: string; mode: 'delete' | 'complete'; name: string; expense: boolean; error: string; ambiguous: boolean };

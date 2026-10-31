@@ -4,6 +4,9 @@ export type Expense = {
   id: string; workspace_id: string; product_id: string; name: string;
   category_id: string; category_name: string; amount: number; currency: 'UAH'; occurred_at: string;
   tags?: Tag[];
+  created_by?: string;
+  archived?: boolean;
+  author?: import('./identity').ProductAuthor;
 };
 export type ExpenseMonth = {
   total: number;

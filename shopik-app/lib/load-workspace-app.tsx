@@ -9,7 +9,7 @@ import WorkspaceApp from '@/app/components/WorkspaceApp';
 // Every direct URL remains authenticated and server-rendered. The same client
 // shell subsequently switches views without requesting another server page.
 export async function loadWorkspaceApp(screen: Screen, requested: { category?: string; month?: string; tag?: string | string[] } = {}) {
-  const { supabase, workspace, account, email, userId } = await requireWorkspace();
+  const { supabase, workspace, account, email, userId, revokedWorkspaceId, membershipVersion } = await requireWorkspace();
   const [categories, tags, theme] = await Promise.all([
     supabase.from('categories').select('*').eq('workspace_id', workspace.workspace_id).order('created_at').order('id'),
     supabase.from('tags').select('*').eq('workspace_id', workspace.workspace_id).order('name').order('id'), readTheme(),
@@ -22,7 +22,7 @@ export async function loadWorkspaceApp(screen: Screen, requested: { category?: s
   const result = screen !== 'settings' && !invalid && !tags.error && !categories.error && (kind === 'expenses' || selected)
     ? await supabase.rpc('list_snapshot', { p_workspace_id: workspace.workspace_id, p_kind: kind, p_category_id: kind === 'products' ? selected : null, p_month: kind === 'expenses' ? month+'-01' : null, p_tag_ids: selectedTags ?? [] })
     : { data: null, error: null };
-  const boot: WorkspaceBoot = { userId, workspace, account, email, categories: categories.data ?? [], tags: tags.data ?? [], categoriesError: !!categories.error, tagsError: !!tags.error, theme,
+  const boot: WorkspaceBoot = { membershipVersion, revokedWorkspaceId, userId, workspace, account, email, categories: categories.data ?? [], tags: tags.data ?? [], categoriesError: !!categories.error, tagsError: !!tags.error, theme,
     initialFilter: { kind, category: selected, month: kind === 'expenses' ? month : '', tags: selectedTags ?? [] }, initial: result.data ?? undefined, loadError: invalid || !!result.error || !!categories.error || !!tags.error };
   return <WorkspaceApp key={userId+':'+workspace.workspace_id+':'+Date.now()} boot={boot} />;
 }

@@ -8,6 +8,13 @@ export async function operation(workspaceId: string, operationId: string, kind: 
   try {
     const client = await workspaceClient(workspaceId);
     if (!client) return { ok: false, error: 'Немає доступу. Оновіть сторінку.', accessLost: true };
+    if ((kind === 'save_product' || kind === 'delete_product' || kind === 'save_category' || kind === 'delete_category') && payload.id) {
+      const session = await client.auth.getClaims();
+      const table = kind.endsWith('category') ? 'categories' : 'products';
+      const record = await client.from(table).select('created_by').eq('workspace_id',workspaceId).eq('id',String(payload.id)).maybeSingle();
+      // A deletion replay can refer to a missing record; the receipt RPC decides that case.
+      if (record.error || (record.data && record.data.created_by !== session.data?.claims.sub)) return {ok:false,error:'Змінювати або видаляти запис може лише його автор.'};
+    }
     const { data, error } = await client.rpc('apply_operation', { p_workspace_id: workspaceId, p_operation_id: operationId, p_kind: kind, p_payload: payload });
     if (error) {
       const messages: Record<string, string> = {

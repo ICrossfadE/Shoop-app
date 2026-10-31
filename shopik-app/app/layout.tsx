@@ -1,3 +1,5 @@
+import ThemeProvider from './components/ThemeProvider';
+import { themeColorScheme } from '@/lib/theme';
 import CacheBoundary from './components/CacheBoundary';
 import type { Metadata } from "next";
 import { Montserrat, Geist_Mono } from "next/font/google";
@@ -21,15 +23,15 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const { theme } = await readTheme();
+  const { theme, userId } = await readTheme();
   return (
     <html
       lang="uk"
       data-theme={theme}
-      style={{ colorScheme: theme }}
+      style={{ colorScheme: themeColorScheme(theme) }}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><CacheBoundary />{children}</body>
+      <body className="min-h-full flex flex-col"><ThemeProvider key={userId} initial={theme}><CacheBoundary />{children}</ThemeProvider></body>
     </html>
   );
 }

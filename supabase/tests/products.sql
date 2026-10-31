@@ -59,12 +59,16 @@ do $$
 declare affected integer;
 begin
   if exists(select 1 from public.products) then raise exception 'User B can read A products'; end if;
-  update public.products set name = 'Атака' where workspace_id = current_setting('shopik.test_workspace_a')::uuid;
+  begin
+    update public.products set name = 'Атака' where workspace_id = current_setting('shopik.test_workspace_a')::uuid;
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'Cross-workspace update allowed'; end if;
-  delete from public.products where workspace_id = current_setting('shopik.test_workspace_a')::uuid;
+  exception when insufficient_privilege then null; end;
+  begin
+    delete from public.products where workspace_id = current_setting('shopik.test_workspace_a')::uuid;
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'Cross-workspace delete allowed'; end if;
+  exception when insufficient_privilege then null; end;
   begin
     insert into public.products(workspace_id, category_id, name, price) values(current_setting('shopik.test_workspace_a')::uuid, current_setting('shopik.test_category_a')::uuid, 'Атака', 1);
     raise exception 'Cross-workspace insert allowed';

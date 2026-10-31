@@ -1,4 +1,5 @@
 "use client";
+import { canDeleteExpense } from '@/lib/permissions';
 import AnimatedNumber from "./AnimatedNumber";
 import { mutateProduct } from "@/lib/mutate-product";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +20,7 @@ const date = new Intl.DateTimeFormat("uk-UA", {
 
 // Month, rows and totals switch as one keyed snapshot, never mixing filters.
 export default function ExpenseList({
+  membershipVersion,
   userId,
   workspace,
   tags,
@@ -26,6 +28,7 @@ export default function ExpenseList({
   initial,
   loadError,
 }: {
+  membershipVersion?: string;
   userId: string;
   workspace: { workspace_id: string; workspace_name: string };
   tags: Tag[];
@@ -47,6 +50,7 @@ export default function ExpenseList({
     { kind: "expenses", category: "", month, tags: selectedTags ?? [] },
     initialFilter,
     initial,
+    membershipVersion,
   );
   const data = invalidTags ? null : query.data?.expenses;
   const error = invalidTags || (!data && (loadError || !!query.error));
@@ -182,7 +186,7 @@ export default function ExpenseList({
                             ))}
                           </ul>
                           <AuthorInfo
-                            author={authors.get(expense.product_id)}
+                            author={expense.author ?? authors.get(expense.product_id)}
                           />
                         </div>
                         <div className="product-end space-y-2 flex flex-col items-end justify-between gap-2">
@@ -190,14 +194,15 @@ export default function ExpenseList({
                             <AnimatedNumber value={expense.amount} />{" "}
                             <small className="text-muted">UAH</small>
                           </p>
-                          <button
+                          {canDeleteExpense(userId, expense) && <button
                             className="rounded border border-danger px-3 py-2 text-danger "
                             onClick={() =>
                               remove(expense.product_id, expense.name)
                             }
                           >
                             Видалити
-                          </button>
+                          </button>}
+                          {expense.archived && <p className="text-sm text-muted">Архівна покупка</p>}
                         </div>
                       </li>
                     ))}

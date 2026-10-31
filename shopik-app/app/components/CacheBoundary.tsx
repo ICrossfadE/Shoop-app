@@ -1,4 +1,5 @@
 'use client';
+import LocalDataStatus from './LocalDataStatus';
 import { useEffect, useSyncExternalStore } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getSupabaseConfig } from '@/lib/supabase/config';
@@ -21,7 +22,7 @@ export default function CacheBoundary() {
     return () => data.subscription.unsubscribe();
   }, []);
   // Keep in-flight forms mounted across route navigation, including failed drafts.
-  return <>
+  return <><LocalDataStatus />
     {[...listCache.failures.values()].map((failure) => <aside key={failure.operationId} role="alert" className="mx-auto w-full max-w-4xl rounded border border-danger bg-surface p-4">
       <p>{failure.name}: {failure.error}</p>
       <button className="text-link underline" onClick={() => mutateProduct(failure.scope, failure.workspaceId, failure.id, failure.mode, failure.name, failure.expense)}>Повторити дію</button>

@@ -1,10 +1,11 @@
+import type { Theme } from '../theme';
 import type { Product } from '../products';
 import type { Category } from '../categories';
 import type { Expense, ExpenseMonth } from '../expenses';
 import type { Tag, TaggedProduct } from '../tags';
 import type { ProductAuthor } from '../identity';
 // Keep in sync with the versioned SQL migrations.
-type Profile = { id: string; display_name: string; avatar_url: string; theme: 'light' | 'dark'; created_at: string };
+type Profile = { id: string; display_name: string; avatar_url: string; theme: Theme; created_at: string };
 type Workspace = {
   id: string;
   name: string;
@@ -38,6 +39,9 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      workspace_people: { Args: { p_workspace_id: string }; Returns: import('../members').WorkspacePerson[] };
+      remove_workspace_member: { Args: { p_workspace_id: string; p_user_id: string; p_joined_at: string }; Returns: undefined };
+
       apply_operation: { Args: { p_workspace_id: string; p_operation_id: string; p_kind: string; p_payload: Record<string, unknown> }; Returns: import('../list-model').MutationData };
       list_snapshot: { Args: { p_workspace_id: string; p_kind: string; p_category_id: string | null; p_month: string | null; p_tag_ids: string[] }; Returns: import('../list-model').ListData };
       product_authors_for_ids: { Args: { p_workspace_id: string; p_ids: string[] }; Returns: ProductAuthor[] };

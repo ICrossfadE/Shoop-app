@@ -14,10 +14,12 @@ import type { Category } from "@/lib/categories";
 // Inline create/rename controls preserve input on error; FK protects nonempty deletion.
 export default function CategoryManager({
   workspaceId,
+  userId,
   categories,
   onChange,
 }: {
   workspaceId: string;
+  userId: string;
   categories: Category[];
   onChange?: (change: MutationData) => void;
 }) {
@@ -54,7 +56,7 @@ export default function CategoryManager({
           ...(existing ?? {
             id,
             workspace_id: workspaceId,
-            created_by: "",
+            created_by: userId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }),
@@ -191,7 +193,7 @@ export default function CategoryManager({
             <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
               {category.name}
             </span>
-            <button
+            {category.created_by === userId && <button
               disabled={
                 busy.includes(category.id) ||
                 ambiguous ||
@@ -207,14 +209,14 @@ export default function CategoryManager({
               className="rounded border px-2 py-1"
             >
               Редагувати
-            </button>
-            <button
+            </button>}
+            {category.created_by === userId && <button
               disabled={busy.includes(category.id)}
               onClick={() => remove(category)}
               className="rounded border border-danger px-2 py-1 text-danger"
             >
               Видалити
-            </button>
+            </button>}
           </li>
         ))}
       </ul>

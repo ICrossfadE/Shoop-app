@@ -7,12 +7,17 @@ import { saveProduct } from '@/app/products/actions';
 import { validateProduct, type ProductErrors } from '@/lib/products';
 import type { Category } from '@/lib/categories';
 import type { Tag, TaggedProduct } from '@/lib/tags';
+import { ownsRecord } from '@/lib/permissions';
+import { localStore } from '@/lib/local-store';
 import TagBadge from './TagBadge';
+
+type LocalDraft = { name: string; description: string; price: string; categoryId: string; tagIds: string[]; operationId: string; ambiguous: boolean };
 
 type Props = { scope: string; temporaryId: string; userId: string; workspaceId: string; product: TaggedProduct | null; categories: Category[]; tags: Tag[]; selectedCategory: string; onClose: () => void; onSaved: () => void };
 
 // Native dialog handles focus trapping, background inertness and keyboard navigation.
 export default function OrderModal({ scope, temporaryId, userId, workspaceId, product, categories, tags, selectedCategory, onClose, onSaved }: Props) {
+  const canEdit = !product || ownsRecord(userId, product);
   const dialog = useRef<HTMLDialogElement>(null);
   const submitting = useRef(false);
   const operationId = useRef(crypto.randomUUID());
@@ -25,6 +30,32 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   const [fields, setFields] = useState<ProductErrors>({});
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+  const [recovered, setRecovered] = useState<LocalDraft | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const draftKey = `draft:${scope}:${product?.id ?? 'new'}`;
+  // Offer saved input explicitly; never overwrite current server fields silently.
+  useEffect(() => {
+    let active = true;
+    void localStore.read<LocalDraft>(userId, draftKey).then((saved) => {
+      if (!active || listCache.owner !== userId) return;
+      if (saved && typeof saved.name === 'string' && typeof saved.price === 'string' && Array.isArray(saved.tagIds)) setRecovered(saved);
+      setStorageReady(true);
+    });
+    return () => { active = false; };
+  }, [userId, draftKey]);
+  useEffect(() => {
+    if (!storageReady || recovered || listCache.owner !== userId) return;
+    void localStore.write(userId, draftKey, { name, description, price, categoryId, tagIds, operationId: operationId.current, ambiguous } satisfies LocalDraft);
+  }, [storageReady, recovered, userId, draftKey, name, description, price, categoryId, tagIds, ambiguous]);
+  // Explicit cancellation discards the local draft; closing the tab keeps it.
+  function dismiss() { void localStore.remove(draftKey); onClose(); }
+  function restore() {
+    if (!recovered) return;
+    setName(recovered.name); setDescription(recovered.description); setPrice(recovered.price);
+    setCategoryId(recovered.categoryId); setTagIds(recovered.tagIds);
+    operationId.current = recovered.operationId; setAmbiguous(recovered.ambiguous); setRecovered(null);
+  }
+
 
   // Moving pills between groups preserves focus for keyboard and screen-reader users.
   function toggleTag(id: string) {
@@ -47,7 +78,7 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   // Keep all user input intact if validation or the network request fails.
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || !canEdit) return;
     const input = { name, description, price, category_id: categoryId, tag_ids: tagIds };
     const validation = validateProduct(input);
     setError('');
@@ -58,6 +89,8 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
     if (!listCache.begin(operationId.current, { scope, id: product?.id ?? temporaryId, product: optimistic })) return;
     submitting.current = true;
     setPending(true);
+    // Persist the retry identity before sending: a lost response must reuse the same payload.
+    await localStore.write(userId, draftKey, { name, description, price, categoryId, tagIds, operationId: operationId.current, ambiguous: true } satisfies LocalDraft);
     let saved = false;
     try {
       const result = await saveProduct(workspaceId, product?.id ?? null, input, operationId.current);
@@ -72,17 +105,20 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
       submitting.current = false;
       setPending(false);
     }
-    if (saved) onSaved();
+    if (saved) { await localStore.remove(draftKey); onSaved(); }
   }
 
   return (
     <dialog ref={dialog} aria-labelledby="product-dialog-title"
-      onCancel={(event) => { event.preventDefault(); if (!pending && !ambiguous) onClose(); }}
+      onCancel={(event) => { event.preventDefault(); if (!pending && !ambiguous) dismiss(); }}
       className="product-dialog fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto bg-surface p-5 text-foreground">
       {/* Product form shared by create and edit; labels have matching field IDs. */}
       <h2 id="product-dialog-title" className="text-xl font-semibold">{product ? 'Редагувати продукт' : 'Новий продукт'}</h2>
+      {!canEdit && <p role="alert" className="text-danger">Редагування доступне лише автору продукту.</p>}
+      {/* Recovery is a local draft, not a queued or confirmed server change. */}
+      {recovered && <aside className="my-3 space-y-2" role="status"><p>На цьому пристрої є чернетка цього продукту.</p><button type="button" onClick={restore}>Відновити чернетку</button><button type="button" onClick={() => { void localStore.remove(draftKey); setRecovered(null); }}>Відкинути чернетку</button></aside>}
       <form onSubmit={submit} noValidate className="mt-5 space-y-4" aria-busy={pending}>
-        <fieldset disabled={pending || ambiguous} className="space-y-4 disabled:opacity-60">
+        <fieldset disabled={pending || ambiguous || !!recovered || !storageReady || !canEdit} className="space-y-4 disabled:opacity-60">
           {/* Mandatory category is also checked by the Workspace-scoped foreign key. */}
           <div>
             <label htmlFor="product-category" className="block font-medium">Категорія</label>
@@ -118,8 +154,8 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         {/* Disable dismissal while a request is in flight to avoid ambiguous saves. */}
         <div className="flex flex-wrap justify-end gap-3">
-          <button type="button" disabled={pending || ambiguous} onClick={onClose} className="rounded border border-line px-4 py-2 disabled:opacity-50">Скасувати</button>
-          <button type="submit" disabled={pending} className="rounded button-primary px-4 py-2 disabled:opacity-50">{pending ? 'Збереження…' : 'Зберегти'}</button>
+          <button type="button" disabled={pending || ambiguous || !!recovered || !storageReady || !canEdit} onClick={dismiss} className="rounded border border-line px-4 py-2 disabled:opacity-50">Скасувати</button>
+          <button type="submit" disabled={pending || !!recovered || !storageReady || !canEdit} className="rounded button-primary px-4 py-2 disabled:opacity-50">{pending ? 'Збереження…' : 'Зберегти'}</button>
         </div>
         {ambiguous && <p role="status">Поля збережено для безпечного повтору. Натисніть «Зберегти», щоб перевірити результат.</p>}
       </form>

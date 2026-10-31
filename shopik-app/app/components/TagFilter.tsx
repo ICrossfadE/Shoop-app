@@ -91,7 +91,7 @@ export default function TagFilter({
         <button
           type="button"
           onClick={() => apply([])}
-          className="text-link underline"
+          className="text-link px-4"
         >
           Скинути фільтр
         </button>

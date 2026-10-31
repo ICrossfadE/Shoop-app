@@ -7,7 +7,7 @@ import type { ProductResult } from '@/lib/products';
 
 // Derive identity from the verified session, with no client-supplied user ID.
 export async function saveTheme(value: string): Promise<ProductResult> {
-  if (!isTheme(value)) return { ok: false, error: 'Виберіть світлу або темну тему.' };
+  if (!isTheme(value)) return { ok: false, error: 'Виберіть одну з доступних колірних тем.' };
   try {
     const client = await createClient(true);
     const { data, error } = await client.auth.getClaims();

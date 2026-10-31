@@ -20,7 +20,7 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
   const catalog = useRef(JSON.stringify([boot.categories, boot.tags]));
   const freshness = useRef({ at: 0, generation: 0, loading: false });
   const scope = `${boot.userId}:${boot.workspace.workspace_id}`;
-  const refresh = useCallback(async (force = false) => {
+  const refresh = useCallback(async (force = false): Promise<void> => {
     const state = freshness.current;
     if (state.loading || (!force && Date.now() - state.at < 30_000)) return;
     state.loading = true;
@@ -28,27 +28,29 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
     try {
       const response = await fetch(`/api/workspace?workspace=${boot.workspace.workspace_id}`, { cache: 'no-store' });
       if (listCache.owner !== boot.userId) return;
-      if (response.status === 401 || response.status === 403) { listCache.clear(); window.location.replace('/login'); return; }
+      if (response.status === 401 || response.status === 403) { await listCache.clear(); window.location.replace('/login'); return; }
       if (!response.ok) throw new Error('Metadata unavailable');
       const next: Pick<WorkspaceBoot, 'categories' | 'tags' | 'theme' | 'userId'> = await response.json();
       if (listCache.owner !== boot.userId) return;
-      if (next.userId !== boot.userId) { listCache.clear(); window.location.replace('/login'); return; }
+      if (next.userId !== boot.userId) { await listCache.clear(); window.location.replace('/login'); return; }
       if (state.generation !== generation) return;
       const signature = JSON.stringify([next.categories, next.tags]);
-      if (catalog.current !== signature) { catalog.current = signature; listCache.invalidate(scope); }
+      if (catalog.current !== signature) { catalog.current = signature; listCache.invalidateLocal(scope); listCache.invalidate(scope); }
       state.at = Date.now();
       setMetadata((previous) => ({ ...previous, ...next, categoriesError: false, tagsError: false }));
       setError('');
     } catch { setError('Не вдалося оновити довідники. Показано останні збережені дані.'); }
-    finally { state.loading = false; }
+    finally { state.loading = false; if (state.generation !== generation && listCache.owner === boot.userId) void refresh(true); }
   }, [boot.userId, boot.workspace.workspace_id, scope]);
 
-  useEffect(() => { listCache.activate(boot.userId); freshness.current.at = Date.now(); }, [boot.userId]);
+  useEffect(() => { listCache.activate(boot.userId); listCache.prepare(scope,boot.membershipVersion); if (boot.revokedWorkspaceId) void listCache.revoke(`${boot.userId}:${boot.revokedWorkspaceId}`); freshness.current.at = Date.now(); }, [boot.userId, boot.revokedWorkspaceId, boot.membershipVersion, scope]);
   useEffect(() => {
     const timer = window.setTimeout(() => { void refresh(); }, 0);
     const onReturn = () => { if (document.visibilityState === 'visible') void refresh(true); };
+    const interval = window.setInterval(onReturn, 30_000);
+    document.addEventListener('visibilitychange', onReturn);
     window.addEventListener('focus', onReturn); window.addEventListener('online', onReturn);
-    return () => { window.clearTimeout(timer); window.removeEventListener('focus', onReturn); window.removeEventListener('online', onReturn); };
+    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange',onReturn); window.clearTimeout(timer); window.removeEventListener('focus', onReturn); window.removeEventListener('online', onReturn); };
   }, [screen, refresh]);
   useEffect(() => {
     // One preparation of the two default views, never every filter combination.
@@ -71,7 +73,9 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
   }, [boot, scope]);
 
   function changed(change: MutationData) {
+    listCache.invalidateLocal(scope);
     freshness.current.generation++; freshness.current.at = 0;
+    if (change.workspaceChanged) { listCache.invalidate(scope); void refresh(true); }
     setMetadata((previous) => ({ ...previous,
       categories: change.category ? [...previous.categories.filter((item) => item.id !== change.category!.id), change.category].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)) : change.deleted ? previous.categories.filter((item) => item.id !== change.deleted) : previous.categories,
       tags: change.tag ? [...previous.tags.filter((item) => item.id !== change.tag!.id), change.tag].sort((a, b) => a.name.localeCompare(b.name)) : previous.tags,
@@ -80,11 +84,11 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
   return <div className="flex flex-1 flex-col bg-page text-foreground">
     <AppHeader account={boot.account} page={screen} />
     {error && <aside role="alert" className="app-main">{error} <button onClick={() => refresh(true)}>Спробувати знову</button></aside>}
-    {screen === 'products' ? <ProductList userId={boot.userId} workspaceId={boot.workspace.workspace_id} workspaceName={boot.workspace.workspace_name} role={boot.workspace.member_role} account={boot.account} email={boot.email}
+    {screen === 'products' ? <ProductList membershipVersion={boot.membershipVersion} userId={boot.userId} workspaceId={boot.workspace.workspace_id} workspaceName={boot.workspace.workspace_name} role={boot.workspace.member_role} account={boot.account} email={boot.email}
       categories={metadata.categories} tags={metadata.tags} hasInitial={!!boot.initial && boot.initialFilter.kind === 'products'} selectedCategory={boot.initialFilter.kind === 'products' ? boot.initialFilter.category : metadata.categories[0]?.id ?? ''}
       selectedTags={boot.initialFilter.kind === 'products' ? boot.initialFilter.tags : []} products={boot.initial?.products ?? []} authors={boot.initial?.authors ?? []}
       loadError={metadata.categoriesError || metadata.tagsError ? 'Не вдалося завантажити довідники.' : null} />
-      : screen === 'expenses' ? <ExpenseList userId={boot.userId} workspace={boot.workspace} tags={metadata.tags} initialFilter={boot.initialFilter.kind === 'expenses' ? boot.initialFilter : { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] }}
+      : screen === 'expenses' ? <ExpenseList membershipVersion={boot.membershipVersion} userId={boot.userId} workspace={boot.workspace} tags={metadata.tags} initialFilter={boot.initialFilter.kind === 'expenses' ? boot.initialFilter : { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] }}
         initial={boot.initialFilter.kind === 'expenses' ? boot.initial : undefined} loadError={metadata.tagsError} />
       : null}
     <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel boot={metadata} onChange={changed} /></div>

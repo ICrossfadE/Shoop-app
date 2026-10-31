@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { isTheme, resolveTheme } from '../lib/theme.ts';
+import { isTheme, resolveTheme, themes, themeColorScheme } from '../lib/theme.ts';
 
-test('only explicit light and dark themes are accepted', () => {
-  assert.equal(isTheme('light'), true); assert.equal(isTheme('dark'), true);
+test('only six explicit themes are accepted', () => {
+  for (const theme of themes) {
+    assert.equal(isTheme(theme), true);
+    assert.equal(resolveTheme(true, theme, 'dark'), theme);
+    assert.equal(resolveTheme(false, null, theme), theme);
+    assert.equal(themeColorScheme(theme), theme === 'dark' ? 'dark' : 'light');
+  }
+  assert.equal(themes.length, 6);
   for (const value of ['system', 'DARK', '', null, {}, 'dark" onload="x']) assert.equal(isTheme(value), false);
 });
 

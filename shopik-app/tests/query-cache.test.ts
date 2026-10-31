@@ -108,3 +108,50 @@ test('a warmed expense screen is invalidated by completion before its first visi
   assert.equal(calls, 1);
   assert.equal(cache.view('u:w', month)?.expenses?.total, 50);
 });
+
+// Persistent restore must not cross the account boundary or override a fresh server seed.
+test('persistent snapshots restore exact filters and late hydration cannot revive signed-out data', async () => {
+  const reads = deferred<ListData>();
+  const writes: string[] = [];
+  const storage = {
+    read: () => reads.promise,
+    write: async (_owner: string, key: string) => { writes.push(key); },
+    clear: async () => {}, remove: async () => {}, invalidate: async () => {},
+  } as unknown as typeof import('../lib/local-store.ts').localStore;
+  const cache = new QueryCache(30000, Date.now, storage);
+  cache.activate('a');
+  const loading = cache.load('a:w', filter, async () => { throw new Error('offline'); });
+  cache.activate('b');
+  reads.resolve(snapshot(product('private-a')));
+  await loading;
+  assert.equal(cache.owner, 'b');
+  assert.equal(cache.entries.size, 0);
+  assert.deepEqual(writes, []);
+});
+
+test('disk fallback stays visible after a network failure and is never marked fresh', async () => {
+  const storage = {
+    read: async () => snapshot(product('saved')),
+    write: async () => {}, clear: async () => {}, remove: async () => {}, invalidate: async () => {},
+  } as unknown as typeof import('../lib/local-store.ts').localStore;
+  const cache = new QueryCache(30000, Date.now, storage);
+  cache.activate('u');
+  await cache.load('u:w', filter, async () => { throw new Error('offline'); });
+  assert.equal(cache.view('u:w', filter)?.products[0].id, 'saved');
+  assert.equal(cache.entry('u:w', filter)?.at, 0);
+  assert.ok(cache.entry('u:w', filter)?.error);
+  assert.equal(cache.view('u:w', {...filter, tags:['missing']}), undefined);
+});
+
+// Eviction of one Workspace must not discard a different Workspace's in-memory snapshot.
+test('revocation purges only the targeted Workspace including late reads', async () => {
+  const cache=new QueryCache(); cache.activate('u');
+  cache.seed('u:revoked',filter,snapshot(product('private')));
+  cache.seed('u:personal',filter,snapshot(product('keep')));
+  const response=deferred<ListData>();
+  const reading=cache.load('u:revoked',filter,()=>response.promise,true);
+  cache.revoke('u:revoked');
+  response.resolve(snapshot(product('late')));await reading;
+  assert.equal(cache.view('u:revoked',filter),undefined);
+  assert.equal(cache.view('u:personal',filter)?.products[0].id,'keep');
+});

@@ -80,6 +80,11 @@ begin
   if jsonb_array_length(authors) <> 2 or not exists(select 1 from jsonb_array_elements(authors) a where a->>'display_name' = 'Автор A')
     or not exists(select 1 from jsonb_array_elements(authors) a where a->>'display_name' = 'Автор B') then raise exception 'Shared Workspace authors incorrect'; end if;
   delete from public.products where id = current_setting('shopik.ui_product');
+  if not exists(select 1 from public.expenses where product_id=current_setting('shopik.ui_product')) then raise exception 'Member deleted foreign completed product'; end if;
+end; $$;
+select set_config('request.jwt.claims','{"sub":"b8bc6ee0-9ddb-456a-8f41-637ec271e001","role":"authenticated"}',true);
+do $$ begin
+  delete from public.products where id = current_setting('shopik.ui_product');
   if exists(select 1 from public.expenses where product_id = current_setting('shopik.ui_product'))
     or exists(select 1 from public.product_tags where product_id = current_setting('shopik.ui_product')) then raise exception 'Completed deletion failed to cascade'; end if;
   if (select count(*) from public.tags) <> 1 then raise exception 'Product deletion removed tag'; end if;

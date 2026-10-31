@@ -6,6 +6,7 @@ import { useList, listCache, navigateList } from "@/lib/use-list";
 import { readTagFilter } from "@/lib/tags";
 import { isWorkspaceId } from "@/lib/products";
 
+import { ownsRecord } from '@/lib/permissions';
 import type { Account, ProductAuthor } from "@/lib/identity";
 import OrderCard from "./OrderCard";
 import AnimatedNumber from "./AnimatedNumber";
@@ -17,6 +18,7 @@ import TagFilter from "./TagFilter";
 import type { Category } from "@/lib/categories";
 
 type Props = {
+  membershipVersion?: string;
   hasInitial?: boolean;
   userId: string;
   workspaceId: string;
@@ -35,6 +37,7 @@ type Props = {
 
 // Server-filtered props are the source of truth; selection is reflected in the URL.
 export default function ProductList({
+  membershipVersion,
   hasInitial = true,
   userId,
   workspaceId,
@@ -80,6 +83,7 @@ export default function ProductList({
     !hasInitial || initialError
       ? undefined
       : { products: initialProducts, authors: initialAuthors, expenses: null },
+    membershipVersion,
   );
   // A separate unfiltered snapshot keeps totals independent of tag selection.
   const categoryQuery = useList(
@@ -95,6 +99,7 @@ export default function ProductList({
     !hasInitial || initialError
       ? undefined
       : { products: initialProducts, authors: initialAuthors, expenses: null },
+    membershipVersion,
   );
   const categoryTotal = categoryQuery.data?.products.reduce(
     (sum, product) => sum + Math.round(product.price * 100),
@@ -296,12 +301,13 @@ export default function ProductList({
                     <p className="mt-2 text-muted">Додайте перший продукт.</p>
                   </section>
                 )}
-              <div className="product-rows">
+              <div className="product-cards">
                 {!loadError &&
                   products.map((product) => (
                     <OrderCard
                       key={product.id}
                       product={product}
+                      canManage={ownsRecord(userId, product)}
                       author={authorMap.get(product.id)}
                       pending={query.pending.some(
                         (operation) => operation.id === product.id,

@@ -132,11 +132,11 @@ begin
   begin
     insert into public.product_tags(workspace_id, product_id, tag_id) values(wid, own_product, current_setting('shopik.tag_one')::uuid);
     raise exception 'Composite FK allowed foreign tag';
-  exception when foreign_key_violation then null; end;
+  exception when foreign_key_violation or insufficient_privilege then null; end;
   begin
     insert into public.product_tags(workspace_id, product_id, tag_id) values(wid, current_setting('shopik.tag_product_b'), own_tag);
     raise exception 'Composite FK allowed foreign product';
-  exception when foreign_key_violation then null; end;
+  exception when foreign_key_violation or insufficient_privilege then null; end;
 end;
 $$;
 set local role anon;
