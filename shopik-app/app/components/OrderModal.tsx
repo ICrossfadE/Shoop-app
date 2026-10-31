@@ -19,12 +19,21 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   const [ambiguous, setAmbiguous] = useState(false);
   const [name, setName] = useState(product?.name ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
-  const [price, setPrice] = useState(product ? String(product.price) : '0');
+  const [price, setPrice] = useState(product ? String(product.price) : '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? selectedCategory);
   const [tagIds, setTagIds] = useState<string[]>(product?.tags.map((tag) => tag.id) ?? []);
   const [fields, setFields] = useState<ProductErrors>({});
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+
+  // Moving pills between groups preserves focus for keyboard and screen-reader users.
+  function toggleTag(id: string) {
+    setTagIds((ids) => ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
+    requestAnimationFrame(() => {
+      Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>('[data-tag-id]') ?? [])
+        .find((button) => button.dataset.tagId === id)?.focus();
+    });
+  }
 
   // Open once per form instance; restore body scrolling on every unmount.
   useEffect(() => {
@@ -67,20 +76,13 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   }
 
   return (
-    <dialog ref={dialog} aria-labelledby="product-dialog-title" aria-describedby="product-dialog-description"
+    <dialog ref={dialog} aria-labelledby="product-dialog-title"
       onCancel={(event) => { event.preventDefault(); if (!pending && !ambiguous) onClose(); }}
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl bg-surface p-6 text-foreground shadow-xl backdrop:bg-black/50">
+      className="product-dialog fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto bg-surface p-5 text-foreground">
       {/* Product form shared by create and edit; labels have matching field IDs. */}
       <h2 id="product-dialog-title" className="text-xl font-semibold">{product ? 'Редагувати продукт' : 'Новий продукт'}</h2>
-      <p id="product-dialog-description" className="mt-2 text-sm text-muted">Ціна у гривнях. Опис можна залишити порожнім.</p>
       <form onSubmit={submit} noValidate className="mt-5 space-y-4" aria-busy={pending}>
         <fieldset disabled={pending || ambiguous} className="space-y-4 disabled:opacity-60">
-          {/* Tags are optional; checkboxes prevent duplicate assignment. */}
-          <fieldset><legend className="mb-2 font-medium">Теги (необов’язково)</legend>
-            <div className="flex flex-wrap gap-3">{tags.map((tag) => <label key={tag.id} className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={tagIds.includes(tag.id)} onChange={(event) => setTagIds((ids) => event.target.checked ? [...ids, tag.id] : ids.filter((id) => id !== tag.id))} /><TagBadge tag={tag} /></label>)}</div>
-            {tags.length === 0 && <p className="text-sm text-muted">Створіть теги у налаштуваннях акаунта, щоб додавати їх до продуктів.</p>}
-            {fields.tag_ids && <p className="text-sm text-danger">{fields.tag_ids}</p>}
-          </fieldset>
           {/* Mandatory category is also checked by the Workspace-scoped foreign key. */}
           <div>
             <label htmlFor="product-category" className="block font-medium">Категорія</label>
@@ -97,14 +99,21 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
           </div>
           <div>
             <label htmlFor="product-description" className="block font-medium">Опис (необов’язково)</label>
-            <textarea id="product-description" name="description" rows={3} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} aria-invalid={!!fields.description} aria-describedby={fields.description ? 'description-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
+            <textarea id="product-description" name="description" rows={2} maxLength={2000} value={description} onChange={(event) => setDescription(event.target.value)} aria-invalid={!!fields.description} aria-describedby={fields.description ? 'description-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
             {fields.description && <p id="description-error" className="mt-1 text-sm text-danger">{fields.description}</p>}
           </div>
           <div>
             <label htmlFor="product-price" className="block font-medium">Ціна, грн</label>
-            <input id="product-price" name="price" type="text" inputMode="decimal" required value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={!!fields.price} aria-describedby={fields.price ? 'price-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
+            <input id="product-price" name="price" type="text" inputMode="decimal" placeholder="0" required value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={!!fields.price} aria-describedby={fields.price ? 'price-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
             {fields.price && <p id="price-error" className="mt-1 text-sm text-danger">{fields.price}</p>}
           </div>
+          {/* Filter-style pills move between selected and available groups. */}
+          <fieldset className="tag-picker"><legend className="mb-2 font-medium">Теги</legend>
+            <div className="selected-tags flex flex-wrap gap-2" aria-label="Вибрані теги">{tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="true" aria-label={`Прибрати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}{!tagIds.length && <span className="text-sm text-muted">Виберіть теги нижче</span>}</div>
+            <div className="mt-2 flex flex-wrap gap-2" aria-label="Доступні теги">{tags.filter((tag) => !tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="false" aria-label={`Додати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}</div>
+            {!tags.length && <p className="text-sm text-muted">Створіть теги у налаштуваннях.</p>}
+            {fields.tag_ids && <p role="alert" className="text-sm text-danger">{fields.tag_ids}</p>}
+          </fieldset>
         </fieldset>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         {/* Disable dismissal while a request is in flight to avoid ambiguous saves. */}

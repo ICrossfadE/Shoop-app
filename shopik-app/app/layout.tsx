@@ -1,12 +1,13 @@
 import CacheBoundary from './components/CacheBoundary';
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Montserrat, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { readTheme } from '@/lib/server-theme';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Self-host the shared font, including Ukrainian glyphs.
+const geistSans = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin", "cyrillic"],
 });
 
 const geistMono = Geist_Mono({

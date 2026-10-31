@@ -27,11 +27,11 @@ export default function SettingsPanel({ boot, onChange }: { boot: WorkspaceBoot;
         {theme.error ? <div role="alert"><p>Не вдалося завантажити особисту тему.</p><RetryLoad /></div> : <ThemePicker key={`${theme.userId}:${theme.theme}`} initial={theme.theme} />}
       </section>
       {/* These sections manage shared data in the current Workspace. */}
-      <section id="tags" aria-labelledby="settings-tags-title" className="scroll-mt-4 space-y-3">
+      <section id="tags" aria-labelledby="settings-tags-title" className="scroll-mt-4 space-y-3 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="settings-tags-title" className="text-lg font-semibold">Теги</h2><p className="text-sm text-muted">Простір: {workspace.workspace_name}</p>
         {tags.error ? <div role="alert"><p>Не вдалося завантажити теги.</p><RetryLoad /></div> : <TagManager onChange={onChange} workspaceId={workspace.workspace_id} tags={tags.data ?? []} />}
       </section>
-      <section id="categories" aria-labelledby="settings-categories-title" className="scroll-mt-4 space-y-3">
+      <section id="categories" aria-labelledby="settings-categories-title" className="scroll-mt-4 space-y-3 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="settings-categories-title" className="text-lg font-semibold">Категорії</h2><p className="text-sm text-muted">Простір: {workspace.workspace_name}</p>
         {categories.error ? <div role="alert"><p>Не вдалося завантажити категорії.</p><RetryLoad /></div> : <CategoryManager onChange={onChange} workspaceId={workspace.workspace_id} categories={categories.data ?? []} />}
       </section>
