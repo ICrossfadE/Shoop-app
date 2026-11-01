@@ -97,7 +97,7 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
       if (discardDeniedAccess(result)) return;
       listCache.finish(operationId.current, result.ok ? result.data : undefined);
       if (!result.ok) { setError(result.error); setFields(result.fields ?? {}); setAmbiguous(!!result.ambiguous); if (!result.ambiguous) operationId.current = crypto.randomUUID(); }
-      else saved = true;
+      else { saved = true; if (!product) window.dispatchEvent(new CustomEvent('shopik-product-created', { detail: { category: categoryId } })); }
     } catch {
       listCache.finish(operationId.current); setAmbiguous(true);
       setError('Результат невідомий. Повторіть збереження з тими самими даними.');

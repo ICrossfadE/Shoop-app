@@ -90,7 +90,8 @@ async function startMock() {
                         return (await t.query('select * from public.ensure_personal_workspace()')).rows;
                     const keys = Object.keys(body), args = keys.map((k, i) => k + '=> $' + (i + 1)).join(',');
                     const q = await t.query(`select public.${name}(${args}) as data`, Object.values(body));
-                    return q.rows[0].data;
+                    // PostgREST serializes scalar numeric as a JSON number; pg/PGlite uses text.
+                    return name === 'correct_expense_price' ? Number(q.rows[0].data) : q.rows[0].data;
                 }
                 const table = url.pathname.split('/').pop();
                 if (!['products', 'categories', 'tags', 'profiles', 'workspace_members','workspaces'].includes(table))
@@ -183,6 +184,11 @@ async function mainInvites(){
    });return page;
   }
   const owner=await pageFor(session);
+  if(process.env.SHOPIK_CHECK_MOBILE){
+    const {checkMobile}=await import('../../docs/testing/017-mobile-ux/check-mobile.mts');
+    await checkMobile({db,owner,wid,cid,homeId,uid,joinerId,pageFor,sessionFor,output,errors});
+    return;
+  }
   await owner.goto('http://127.0.0.1:3191/settings');
   async function createLink(){await owner.getByRole('button',{name:'Запросити за посиланням',exact:true}).click();const field=owner.getByLabel('Нове посилання запрошення');await field.waitFor();const value=await field.inputValue();const token=new URLSearchParams(new URL(value).hash.slice(1)).get('token');assert.ok(/^[A-Za-z0-9_-]{43}$/.test(token));secrets.push(token);return {value,token};}
   const first=await createLink();
@@ -215,7 +221,7 @@ async function mainInvites(){
   await anonymous.getByRole('button',{name:'Приєднатися до простору',exact:true}).waitFor();
   assert.equal((await db.query('select count(*)::int n from public.workspace_members where workspace_id=$1 and user_id=$2',[wid,joinerId])).rows[0].n,0,'OAuth and preview must not consume invite');
   await anonymous.getByRole('button',{name:'Приєднатися до простору',exact:true}).click();
-  await anonymous.getByRole('heading',{name:'Список покупок',exact:true}).waitFor();
+  await anonymous.getByRole('heading',{name:'Список продуктів',exact:true}).waitFor();
   assert.equal((await db.query('select role from public.workspace_members where workspace_id=$1 and user_id=$2',[wid,joinerId])).rows[0].role,'member');
   assert.equal((await anonymous.context().cookies()).find(cookie=>cookie.name==='shopik-workspace')?.value,wid);
   assert.equal((await anonymous.context().cookies()).some(cookie=>cookie.name==='shopik-invite'),false);

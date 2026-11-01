@@ -1,5 +1,13 @@
 # База даних Shopik
 
+## Коригування фактичної ціни 017
+
+Міграція `202611010013_expense_price.sql` після personal_workspace_recovery 012 додає вузьку RPC `correct_expense_price(workspace_id, expense_id, operation_id, amount, expected_amount)`. Вона змінює лише `expenses.amount`; завершений `products.price` і всі історичні метадані залишаються незмінними. Це виняток 017 до попереднього загального правила незмінності суми завершеної покупки. Архівні витрати незмінні.
+
+Функція security definer має порожній search_path та grant лише authenticated. Вона бере спільний із виключенням workspace_write_access lock, повторно перевіряє членство й автора витрати, відхиляє archived, від'ємну/завелику/надто точну суму. Незбіг expected_amount відхиляється з `40001`, відмова прав — `42501`, валідація — `22023`. Прямий UPDATE expenses клієнту не надається.
+
+У `shopik_private.expense_price_receipts` зберігаються тільки user/workspace/operation ID та SHA256 канонічного payload. Таблиця має RLS без клієнтських grants. Receipt і зміна суми комітяться разом. Повтор із тим самим ключем і даними повертає поточну підтверджену суму, не переписуючи новішу; інший payload із тим самим ключем відхиляється. Повтор після виключення/архівування не обходить перевірку доступу. SQL/RLS тест: `supabase/tests/expense_price.sql`; незалежні з'єднання: `docs/testing/017-mobile-ux/check-price-concurrency.mts` через чинний native fixture.
+
 ## Відновлення особистого простору 016
 
 Нова міграція `202610310012_personal_workspace_recovery.sql` після міграції інвайтів 011 перевизначає ensure_personal_workspace. Auth UID визначає власника; advisory transaction lock за акаунтом серіалізує одночасні ініціалізації, а unique partial index зберігає один is_personal простір на owner_id. Наявне коректне owner-членство повертається без запису. Відсутнє чи неправильне членство відновлюється тільки у власному особистому просторі. Чужі ролі, простори, продукти та історія не змінюються. Прямий запис членства не надається. Тест `supabase/tests/personal_workspace.sql` відкочується; незалежна конкуренція перевіряється check-invite-concurrency.mjs. Hosted-схема цими локальними перевірками не підтверджена.

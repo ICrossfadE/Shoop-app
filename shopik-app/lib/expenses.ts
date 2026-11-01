@@ -1,5 +1,5 @@
 import type { Tag } from './tags';
-// Expense snapshots stay immutable until deletion of the completed product.
+// Historical metadata stays immutable; authors may correct live actual amounts (017).
 export type Expense = {
   id: string; workspace_id: string; product_id: string; name: string;
   category_id: string; category_name: string; amount: number; currency: 'UAH'; occurred_at: string;

@@ -198,7 +198,8 @@ async function runShared(){
   // Restore the active fixture so the target page has an unbought product too.
   const targetForPage=(await asUser(targetId,"select public.save_product_tags($1,null,'Target active','',15,$2,'{}') id",[wid,cid])).rows[0].id;
   const target=await open(testSession(targetId,'Removed author'));
-  await target.getByRole('button',{name:'Додати продукт',exact:true}).click();
+  await target.getByRole('button',{name:'Створити',exact:true}).click();
+  await target.getByRole('button',{name:'Створити продукт',exact:true}).click();
   await target.getByRole('dialog').getByLabel('Назва',{exact:true}).fill('Revoked draft');
   await target.waitForFunction(()=>new Promise(resolve=>{const r=indexedDB.open('shopik-local',1);r.onsuccess=()=>{const d=r.result;const q=d.transaction('records').objectStore('records').getAll();q.onsuccess=()=>{resolve(q.result.some(x=>x.key.startsWith('draft:')));d.close();};};}));
   await owner.goto('http://127.0.0.1:3191/settings');
@@ -225,7 +226,7 @@ async function runShared(){
   await owner.getByRole('heading',{name:'Archived target',exact:true}).waitFor();
   const archived=owner.locator('.expense-row').filter({hasText:'Archived target'});
   assert.equal(await archived.getByRole('button',{name:'Видалити',exact:true}).count(),0);
-  await archived.getByText('Removed author',{exact:true}).waitFor();
+  await archived.getByRole('img',{name:'Removed author',exact:true}).waitFor();
   await owner.screenshot({path:path.join(output,'archived-expenses-390.png'),fullPage:true});
   await owner.setViewportSize({width:1440,height:1000});
   await owner.screenshot({path:path.join(output,'archived-expenses-1440.png'),fullPage:true});

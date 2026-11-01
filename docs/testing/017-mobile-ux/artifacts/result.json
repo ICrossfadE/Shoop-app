@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "isolated": true,
+  "layouts": 90,
+  "themes": 6,
+  "widths": [
+    320,
+    360,
+    390,
+    768,
+    1440
+  ],
+  "scenarios": [
+    "creation x3",
+    "accordion toggle",
+    "filtered category totals",
+    "long press and movement cancellation",
+    "shared completion",
+    "actual price and lost-response retry",
+    "author controls",
+    "200% root text",
+    "short landscape modal",
+    "synthetic touch pointer and Escape focus"
+  ],
+  "hosted": false
+}

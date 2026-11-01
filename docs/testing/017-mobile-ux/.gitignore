@@ -1,0 +1,6 @@
+# Generated runtime shims and failure diagnostics are not review artifacts.
+artifacts/fetch-shim.cjs
+artifacts/server.log
+artifacts/retry-failure.png
+regression-workspaces/
+regression-shared/

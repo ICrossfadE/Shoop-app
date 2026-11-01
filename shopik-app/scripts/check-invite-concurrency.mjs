@@ -86,5 +86,9 @@ try{
  assert.equal((await admin.query('select count(*)::int n from public.workspaces where owner_id=$1 and is_personal',[freshUser])).rows[0].n,1);
  assert.equal((await admin.query('select role from public.workspace_members where workspace_id=$1 and user_id=$2',[wid,freshUser])).rows[0].role,'member');
  console.log('PASS independent connections: 12 invited-first personal initializations create exactly one owner workspace');
+ if(process.env.SHOPIK_CHECK_MOBILE){
+  const {checkPriceConcurrency}=await import('../../docs/testing/017-mobile-ux/check-price-concurrency.mts');
+  await checkPriceConcurrency({admin,a,b,c,wid,owner,author:winner,begin,asUser,waiting});
+ }
 }catch(error){console.error(error.message);process.exitCode=1;}
 finally{await Promise.allSettled(clients.map(c=>c.end()));if(server){try{await execute('pg_ctl',['-D',data,'stop','-m','immediate','-w']);}catch{server.kill();}}}

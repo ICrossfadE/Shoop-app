@@ -38,7 +38,7 @@ export async function checkWorkspaces({db,owner,member,wid,joinerId,uid,output,p
  await member.goto(origin+'/login');
  await member.getByRole('heading',{name:'Спільний простір',exact:true}).waitFor();
  await member.getByRole('button',{name:'Відкрити мій простір',exact:true}).click();
- await member.getByRole('heading',{name:'Список покупок',exact:true}).waitFor();
+ await member.getByRole('heading',{name:'Список продуктів',exact:true}).waitFor();
  assert.equal((await member.context().cookies()).find(c=>c.name==='shopik-workspace')?.value,personal);
  await member.context().addCookies([{name:'shopik-workspace',value:wid,url:origin}]);
  await member.goto(origin+'/settings');
@@ -49,7 +49,7 @@ export async function checkWorkspaces({db,owner,member,wid,joinerId,uid,output,p
  assert.equal(new URL(member.url()).searchParams.get('redirect_to'),origin+'/auth/callback?flow=personal');
  setOAuth(sessionFor(joinerId,'Invited user'));
  await member.goto(origin+'/auth/callback?code=fixture&flow=personal');
- await member.getByRole('heading',{name:'Список покупок',exact:true}).waitFor();
+ await member.getByRole('heading',{name:'Список продуктів',exact:true}).waitFor();
  assert.equal((await member.context().cookies()).find(c=>c.name==='shopik-workspace')?.value,personal);
  assert.equal(Number((await db.query('select count(*) n from public.workspaces where owner_id=$1 and is_personal',[joinerId])).rows[0].n),1);
  // Invited-only legacy accounts can recover a home directly from /login before entering the shell.
@@ -59,7 +59,7 @@ export async function checkWorkspaces({db,owner,member,wid,joinerId,uid,output,p
  const legacyPage=await pageFor(sessionFor(legacy,'Legacy invited user'));
  await legacyPage.goto(origin+'/login');
  await legacyPage.getByRole('button',{name:'Відкрити мій простір',exact:true}).click();
- await legacyPage.getByRole('heading',{name:'Список покупок',exact:true}).waitFor();
+ await legacyPage.getByRole('heading',{name:'Список продуктів',exact:true}).waitFor();
  assert.equal(Number((await db.query('select count(*) n from public.workspaces where owner_id=$1 and is_personal',[legacy])).rows[0].n),1);
  // Paste validation never navigates to an external origin; valid input enters the existing preview flow.
  await owner.goto(origin+'/settings');

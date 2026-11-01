@@ -2,8 +2,7 @@
 import AnimatedNumber from "./AnimatedNumber";
 
 import type { TaggedProduct } from "@/lib/tags";
-import TagBadge from "./TagBadge";
-import AuthorInfo from "./AuthorInfo";
+import CompactAuthor from "./CompactAuthor";
 import type { ProductAuthor } from "@/lib/identity";
 import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { createPortal } from 'react-dom';
@@ -16,6 +15,7 @@ type Props = {
   onEdit: (trigger: HTMLElement) => void;
   onStatus: () => void;
   onDelete: () => void;
+  expense?: boolean;
 };
 
 // Present one persisted product and its explicit edit, completion and delete actions.
@@ -27,16 +27,23 @@ export default function OrderCard({
   onEdit,
   onStatus,
   onDelete,
+  expense = false,
 }: Props) {
   const completed = product.status === "completed";
-  const day = new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv" });
-  const isToday =
-    day.format(new Date(product.created_at)) === day.format(new Date());
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const origin = useRef({ x: 0, y: 0 });
+  const held = useRef(false);
+  // Cancel long press on scroll, pointer movement, release and unmount.
+  function cancelHold() { if (hold.current) clearTimeout(hold.current); hold.current = null; }
+  useEffect(() => {
+    document.addEventListener('scroll', cancelHold, true);
+    return () => { cancelHold(); document.removeEventListener('scroll', cancelHold, true); };
+  }, []);
   // Close outside the menu, restoring keyboard focus on Escape.
   useEffect(() => {
     if (!open) return;
@@ -66,56 +73,40 @@ export default function OrderCard({
   },[open]);
   return (
     <article
-      className={`product-row relative ${isToday ? "product-today" : ""}`}
+      className={`product-row compact-product ${expense ? 'expense-row' : ''}`}
       aria-busy={pending}
+      onPointerDown={event => {
+        held.current = false;
+        if (!canManage || pending || event.button !== 0 || !event.isPrimary || (event.target as HTMLElement).closest('button')) return;
+        origin.current = { x: event.clientX, y: event.clientY };
+        cancelHold();
+        hold.current = setTimeout(() => { held.current = true; setOpen(true); }, 550);
+      }}
+      onPointerMove={event => { if (Math.hypot(event.clientX - origin.current.x, event.clientY - origin.current.y) > 8) cancelHold(); }}
+      onPointerUp={cancelHold} onPointerCancel={cancelHold} onPointerLeave={cancelHold}
+      onContextMenu={event => { if (canManage) { event.preventDefault(); cancelHold(); setOpen(true); } }}
+      onClickCapture={event => {
+        if (!held.current) return;
+        held.current = false;
+        // Some touch browsers omit the release click. Do not consume the user's
+        // next deliberate menu action when that synthetic click never arrives.
+        if (panel.current?.contains(event.target as Node)) return;
+        event.preventDefault(); event.stopPropagation();
+      }}
     >
-      {/* Product details wrap on narrow screens and for long names. */}
-      <div className="min-w-0 space-y-2 break-words [overflow-wrap:anywhere]">
-        {pending && (
-          <p role="status" className="text-sm text-muted">
-            Зберігається…
-          </p>
-        )}
-        <h3
-          className={`text-lg font-semibold ${completed ? "text-muted line-through" : ""}`}
-        >
-          {product.name}
-        </h3>
-        {product.description && (
-          <p className="whitespace-pre-wrap text-muted">
-            {product.description}
-          </p>
-        )}
-        <ul aria-label="Теги продукту" className="flex flex-wrap gap-2">
-          {product.tags.map((tag) => (
-            <li key={tag.id}>
-              <TagBadge tag={tag} />
-            </li>
-          ))}
-        </ul>
-        {/* <ul
-          aria-label="Теги продукту"
-          className="flex absolute w-[120%] top-0 right-0 left-0"
-        >
-          {product.tags.map((tag) => (
-            <li key={tag.id} className="flex-grow h-2">
-              <div
-                style={{ backgroundColor: tag.color }}
-                // className="w-4 h-4 rounded-full"
-                className="h-2"
-              />
-            </li>
-          ))}
-        </ul> */}
-        <AuthorInfo author={author} createdAt={product.created_at} />
+      {/* Two compact rows: purchase name followed by author and local date. */}
+      <div className="compact-details">
+        <h3 className="font-semibold">{product.name}</h3>
+        <CompactAuthor author={author} timestamp={product.created_at} />
+        {pending && <span role="status" className="sr-only">Зберігається…</span>}
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
-      <div className="product-end">
+      <div className="product-end compact-end">
         <p className="product-price">
           <AnimatedNumber value={product.price} />{" "}
-          <small className="text-muted">UAH</small>
+
         </p>
-        <div className="mt-2 flex justify-end gap-2">
+        <div className="compact-actions">
           {!completed && (
             <button
               disabled={pending}
@@ -178,7 +169,7 @@ export default function OrderCard({
                 style={{position:'fixed',inset:'auto',margin:0,maxWidth:'calc(100vw - 16px)',maxHeight:'calc(100dvh - 16px)',overflowY:'auto'}}
                 aria-label="Дії продукту"
               >
-                {!completed && (
+                {(!completed || expense) && (
                   <button
                     data-menu-action
                     disabled={pending}
@@ -187,7 +178,7 @@ export default function OrderCard({
                       onEdit(trigger.current!);
                     }}
                   >
-                    Редагувати
+                    {expense ? 'Змінити ціну' : 'Редагувати'}
                   </button>
                 )}
                 <button

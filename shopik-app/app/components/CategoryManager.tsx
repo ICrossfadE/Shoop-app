@@ -1,6 +1,7 @@
 "use client";
 import type { MutationData } from "@/lib/list-model";
 import {
+  useId,
   useState,
   useTransition,
   useOptimistic,
@@ -17,12 +18,15 @@ export default function CategoryManager({
   userId,
   categories,
   onChange,
+  createOnly = false,
 }: {
   workspaceId: string;
   userId: string;
   categories: Category[];
   onChange?: (change: MutationData) => void;
+  createOnly?: boolean;
 }) {
+  const inputId = useId();
   const [visible, updateVisible] = useOptimistic(
     categories,
     (previous: Category[], change: { id: string; category?: Category }) =>
@@ -134,14 +138,14 @@ export default function CategoryManager({
   }
 
   return (
-    <div className="category-manager">
+    <div className="category-manager" data-locked={pending || ambiguous}>
       {/* Category creation and rename form. */}
       <form onSubmit={submit} className="my-4 space-y-2">
-        <label htmlFor="category-name" className="block">
+        <label htmlFor={inputId} className="block">
           {editing ? "Нова назва категорії" : "Назва нової категорії"}
         </label>
         <input
-          id="category-name"
+          id={inputId}
           required
           maxLength={120}
           value={name}
@@ -184,7 +188,7 @@ export default function CategoryManager({
         {pending ? "Зберігається…" : notice}
       </p>
       {/* Workspace category actions. */}
-      <ul className="space-y-3">
+      {!createOnly && <ul className="space-y-3">
         {visible.map((category) => (
           <li
             key={category.id}
@@ -219,7 +223,7 @@ export default function CategoryManager({
             </button>}
           </li>
         ))}
-      </ul>
+      </ul>}
     </div>
   );
 }

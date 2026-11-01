@@ -1,7 +1,7 @@
 import Link from "./ScreenLink";
 import type { Account } from "@/lib/identity";
 import Avatar from "./Avatar";
-import ThemeToggle from "./ThemeToggle";
+
 
 // One header gives every protected page the same visible Google account.
 export default function AppHeader({

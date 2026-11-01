@@ -1,345 +1,65 @@
 "use client";
-
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
-import { useList, listCache, navigateList } from "@/lib/use-list";
-import { readTagFilter } from "@/lib/tags";
-import { isWorkspaceId } from "@/lib/products";
-
+import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useList, listCache } from '@/lib/use-list';
+import { readTagFilter, type Tag, type TaggedProduct } from '@/lib/tags';
 import { ownsRecord } from '@/lib/permissions';
-import type { Account, ProductAuthor } from "@/lib/identity";
-import OrderCard from "./OrderCard";
-import AnimatedNumber from "./AnimatedNumber";
-import ScreenLink from "./ScreenLink";
-import DeleteProductDialog from "./DeleteProductDialog";
-import { mutateProduct } from "@/lib/mutate-product";
-import type { Tag, TaggedProduct } from "@/lib/tags";
-import TagFilter from "./TagFilter";
-import type { Category } from "@/lib/categories";
+import type { Account, ProductAuthor } from '@/lib/identity';
+import type { Category } from '@/lib/categories';
+import type { ListData, ListFilter } from '@/lib/list-model';
+import { mutateProduct } from '@/lib/mutate-product';
+import OrderCard from './OrderCard';
+import AnimatedNumber from './AnimatedNumber';
+import DeleteProductDialog from './DeleteProductDialog';
+import TagFilter from './TagFilter';
+import WorkspaceAvatars from './WorkspaceAvatars';
 
 type Props = {
-  membershipVersion?: string;
-  hasInitial?: boolean;
-  userId: string;
-  workspaceId: string;
-  workspaceName: string;
-  email: string;
-  role: string;
-  account: Account;
-  authors: ProductAuthor[];
-  products: TaggedProduct[];
-  loadError: string | null;
-  categories: Category[];
-  selectedCategory: string;
-  tags: Tag[];
-  selectedTags: string[];
+  membershipVersion?: string; hasInitial?: boolean; userId: string; workspaceId: string;
+  workspaceName: string; email: string; role: string; account: Account;
+  authors: ProductAuthor[]; products: TaggedProduct[]; loadError: string | null;
+  categories: Category[]; selectedCategory: string; tags: Tag[]; selectedTags: string[];
 };
 
-// Server-filtered props are the source of truth; selection is reflected in the URL.
-export default function ProductList({
-  membershipVersion,
-  hasInitial = true,
-  userId,
-  workspaceId,
-  workspaceName,
-  email,
-  role,
-  products: initialProducts,
-  loadError: initialError,
-  categories,
-  selectedCategory: initialCategory,
-  tags,
-  selectedTags: initialTags,
-  authors: initialAuthors,
-}: Props) {
-  const params = useSearchParams();
-  const requested = params.get("category");
-  const selectedCategory =
-    isWorkspaceId(requested) &&
-    categories.some((category) => category.id === requested)
-      ? requested
-      : (categories[0]?.id ?? "");
-  const parsedTags = readTagFilter(params.getAll("tag"));
-  const selectedTags = parsedTags ?? [];
-  const invalidTags =
-    !parsedTags ||
-    selectedTags.some((id) => !tags.some((tag) => tag.id === id));
-  const filter = {
-    kind: "products" as const,
-    category: selectedCategory,
-    tags: selectedTags,
-    month: "",
-  };
-  const query = useList(
-    userId,
-    workspaceId,
-    filter,
-    {
-      kind: "products",
-      category: initialCategory,
-      tags: initialTags,
-      month: "",
-    },
-    !hasInitial || initialError
-      ? undefined
-      : { products: initialProducts, authors: initialAuthors, expenses: null },
-    membershipVersion,
-  );
-  // A separate unfiltered snapshot keeps totals independent of tag selection.
-  const categoryQuery = useList(
-    userId,
-    workspaceId,
-    { ...filter, tags: [] },
-    {
-      kind: "products",
-      category: initialCategory,
-      tags: initialTags,
-      month: "",
-    },
-    !hasInitial || initialError
-      ? undefined
-      : { products: initialProducts, authors: initialAuthors, expenses: null },
-    membershipVersion,
-  );
-  const categoryTotal = categoryQuery.data?.products.reduce(
-    (sum, product) => sum + Math.round(product.price * 100),
-    0,
-  );
-  const products = invalidTags ? [] : (query.data?.products ?? []);
-  const authors = query.data?.authors ?? [];
-  const loadError = invalidTags
-    ? "Один із тегів недоступний. Скиньте фільтр."
-    : (!query.data && (query.error || initialError)) || null;
-  const categoryNav = useRef<HTMLElement>(null);
-  const authorMap = new Map(
-    authors.map((author) => [author.product_id, author]),
-  );
-  // Keep the active category visible inside its horizontal scroll container.
-  useEffect(() => {
-    categoryNav.current
-      ?.querySelector('[aria-pressed="true"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [selectedCategory]);
-  const setEditor = (value: { product: TaggedProduct | null }) =>
-    listCache.openDraft({
-      ...value,
-      key: crypto.randomUUID(),
-      trigger: editorTrigger.current ?? newButton.current ?? undefined,
-      scope: query.scope,
-      userId,
-      workspaceId,
-      categories,
-      tags,
-      selectedCategory,
-    });
+// Each category uses the existing scoped cache; sums and rows share one filtered snapshot.
+function CategorySection({ category, selectedTags, initial, initialFilter, ...props }: Props & { category: Category; initial?: ListData; initialFilter: ListFilter }) {
+  const query = useList(props.userId, props.workspaceId, { kind: 'products', category: category.id, month: '', tags: selectedTags }, initialFilter, category.id === initialFilter.category ? initial : undefined, props.membershipVersion);
   const [removing, setRemoving] = useState<TaggedProduct | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [pending, startTransition] = useTransition();
-  const newButton = useRef<HTMLButtonElement>(null);
-  const editorTrigger = useRef<HTMLElement | null>(null);
-
-  // Explicit modes distinguish completion and permanent deletion.
-  function mutate(product: TaggedProduct, mode: "delete" | "complete") {
-    setError("");
-    setNotice("");
-    setRemoving(null);
-    startTransition(async () => {
-      const result = await mutateProduct(
-        query.scope,
-        workspaceId,
-        product.id,
-        mode,
-        product.name,
-      );
-      if (result?.ok)
-        setNotice(
-          mode === "delete"
-            ? "Продукт видалено."
-            : "Статус і витрати оновлено.",
-        );
-    });
-  }
-
-  return (
-    <div className="flex flex-1 flex-col bg-page text-foreground">
-      {/* Workspace navigation and session controls. */}
-      <main className="app-main flex-1 space-y-5">
-        {/* Categories are persisted independently of the selected product list. */}
-        <section className="space-y-3" aria-labelledby="workspace-heading">
-          <h1 className="font-semibold">Список покупок</h1>
-          <h2 id="workspace-heading" className="text-xl font-semibold">
-            {workspaceName}
-          </h2>
-          <p className="break-all text-sm text-muted">
-            {email} · {role === "owner" ? "Власник" : "Учасник"}
-          </p>
-        </section>
-        <div className="shopping-layout">
-          <aside className="space-y-4">
-            {/* Missing data is never represented as a zero sum. */}
-            <section className="category-total" aria-label="Сума категорії">
-              <p className="text-sm text-muted">Загальна сума категорії</p>
-              <strong>
-                {categoryTotal !== undefined ? (
-                  <>
-                    <AnimatedNumber value={categoryTotal / 100} />{" "}
-                    <small>UAH</small>
-                  </>
-                ) : categoryQuery.error ? (
-                  "Недоступно"
-                ) : (
-                  "Завантаження…"
-                )}
-              </strong>
-            </section>
-            <TagFilter
-              tags={tags}
-              selected={selectedTags}
-              action="/"
-              preserved={{ name: "category", value: selectedCategory }}
-            />
-          </aside>
-          <div className="shopping-content">
-            {" "}
-            <nav
-              ref={categoryNav}
-              aria-label="Категорії продуктів"
-              className="categories flex w-full min-w-0 gap-2 overflow-x-auto py-2"
-            >
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  title={category.name}
-                  aria-pressed={selectedCategory === category.id}
-                  onClick={() => {
-                    setError("");
-                    const params = new URLSearchParams({
-                      category: category.id,
-                    });
-                    selectedTags.forEach((id) => params.append("tag", id));
-                    navigateList(`/?${params}`);
-                  }}
-                  className={`max-w-[85%] shrink-0 whitespace-nowrap overflow-hidden text-ellipsis border px-3 py-2 ${selectedCategory === category.id ? "button-primary" : "bg-surface"}`}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </nav>
-            {/* Distinguish loading failures, zero categories and an empty category. */}
-            {query.error && query.data && (
-              <p role="alert">
-                {query.error}{" "}
-                <button onClick={query.retry}>Спробувати знову</button>
-              </p>
-            )}
-            {(loadError || error) && (
-              <p
-                role="alert"
-                className="rounded bg-danger-surface p-4 text-danger"
-              >
-                {loadError || error}
-              </p>
-            )}
-            {loadError && (
-              <button
-                disabled={pending}
-                onClick={query.retry}
-                className="rounded border px-3 py-2"
-              >
-                Спробувати знову
-              </button>
-            )}
-            <p role="status" className="text-sm text-muted">
-              {query.pending.length
-                ? "Зберігається…"
-                : query.loading
-                  ? "Оновлюємо дані…"
-                  : notice}
-            </p>
-            {!loadError && categories.length === 0 && (
-              <p className="rounded border border-dashed p-6">
-                Спочатку створіть категорію, щоб додати продукт.{" "}
-                <ScreenLink
-                  href="/settings#categories"
-                  className="text-link underline"
-                >
-                  Створити категорію
-                </ScreenLink>
-              </p>
-            )}
-            <section
-              aria-label="Список покупок"
-              aria-busy={query.loading}
-              className="relative min-w-0 space-y-4"
-            >
-              {/* Sticky action stays inside the product section, above its cards. */}
-              <div className="sticky top-0 z-20 bg-page py-3">
-                <button
-                  ref={newButton}
-                  disabled={!!loadError || categories.length === 0}
-                  onClick={(event) => {
-                    editorTrigger.current = event.currentTarget;
-                    setNotice("");
-                    setEditor({ product: null });
-                  }}
-                  className="w-full rounded button-primary px-4 py-3 font-medium disabled:opacity-50"
-                >
-                  Додати продукт
-                </button>
-              </div>
-              {!loadError &&
-                categories.length > 0 &&
-                products.length === 0 &&
-                !query.loading && (
-                  <section className="rounded-lg border border-dashed border-line p-8 text-center">
-                    <h3 className="font-semibold">
-                      {selectedTags.length
-                        ? "Продуктів із вибраними тегами немає"
-                        : "У цій категорії поки немає продуктів"}
-                    </h3>
-                    <p className="mt-2 text-muted">Додайте перший продукт.</p>
-                  </section>
-                )}
-              <div className="product-cards">
-                {!loadError &&
-                  products.map((product) => (
-                    <OrderCard
-                      key={product.id}
-                      product={product}
-                      canManage={ownsRecord(userId, product)}
-                      author={authorMap.get(product.id)}
-                      pending={query.pending.some(
-                        (operation) => operation.id === product.id,
-                      )}
-                      onEdit={(trigger) => {
-                        editorTrigger.current = trigger;
-                        setNotice("");
-                        setEditor({ product });
-                      }}
-                      onStatus={() => mutate(product, "complete")}
-                      onDelete={() => {
-                        setError("");
-                        setRemoving(product);
-                      }}
-                    />
-                  ))}
-              </div>
-            </section>
-          </div>
-        </div>
-      </main>
-      {/* Separate dialogs for editing and the explicit expense/delete choice. */}
-      {removing && (
-        <DeleteProductDialog
-          product={removing}
-          pending={false}
-          error={error}
-          onClose={() => setRemoving(null)}
-          onDelete={() => mutate(removing, "delete")}
-          onExpense={() => mutate(removing, "complete")}
-        />
-      )}
+  const products = query.data?.products ?? [];
+  const authors = new Map((query.data?.authors ?? []).map(author => [author.product_id, author]));
+  const total = products.reduce((sum, product) => sum + Math.round(product.price * 100), 0) / 100;
+  // Native details provides independent accessible expansion without changing URL filters.
+  return <details className="category-accordion" data-category={category.id} open>
+    <summary><span className="category-name">{category.name}</span><span className="category-sum">{query.data ? <><AnimatedNumber value={total} /></> : query.error ? 'Недоступно' : '…'}</span></summary>
+    <div className="category-panel" aria-busy={query.loading}>
+      {query.error && <p role="alert">{query.error} <button onClick={query.retry}>Спробувати знову</button></p>}
+      {query.loading && !query.data && <p role="status" className="text-muted">Завантажуємо покупки…</p>}
+      {query.data && !products.length && <p className="category-empty text-muted">{selectedTags.length ? 'За вибраними тегами покупок немає.' : 'Покупок ще немає. Додайте через «+».'}</p>}
+      <div className="product-cards">{products.map(product => <OrderCard key={product.id} product={product} author={authors.get(product.id)} canManage={ownsRecord(props.userId, product)} pending={query.pending.some(operation => operation.id === product.id)}
+        onEdit={trigger => listCache.openDraft({ key: crypto.randomUUID(), trigger, scope: query.scope, userId: props.userId, workspaceId: props.workspaceId, product, categories: props.categories, tags: props.tags, selectedCategory: category.id })}
+        onStatus={() => void mutateProduct(query.scope, props.workspaceId, product.id, 'complete', product.name)} onDelete={() => setRemoving(product)} />)}</div>
     </div>
-  );
+    {removing && <DeleteProductDialog product={removing} pending={false} error="" onClose={() => setRemoving(null)} onDelete={() => { setRemoving(null); void mutateProduct(query.scope, props.workspaceId, removing.id, 'delete', removing.name); }} onExpense={() => { setRemoving(null); void mutateProduct(query.scope, props.workspaceId, removing.id, 'complete', removing.name); }} />}
+  </details>;
+}
+
+// The home screen prioritizes purchases; creation is owned by the shared floating action.
+export default function ProductList(props: Props) {
+  const params = useSearchParams();
+  const selectedTags = readTagFilter(params.getAll('tag'));
+  const invalidTags = !selectedTags || selectedTags.some(id => !props.tags.some(tag => tag.id === id));
+  const initialFilter: ListFilter = { kind: 'products', category: props.selectedCategory, tags: props.selectedTags, month: '' };
+  const initial = props.hasInitial && !props.loadError ? { products: props.products, authors: props.authors, expenses: null } : undefined;
+  return <main className="app-main mobile-main shopping-home">
+    {/* Minimal heading and current workspace participants. */}
+    <section className="list-heading"><h1>Список продуктів</h1><WorkspaceAvatars workspaceId={props.workspaceId} userId={props.userId} account={props.account} /></section>
+    {/* Filters retain AND semantics and URL history without a sidebar. */}
+    <TagFilter tags={props.tags} selected={selectedTags ?? []} action="/" preserved={{ name: 'category', value: params.get('category') ?? props.selectedCategory }} />
+    {props.loadError && <p role="alert">{props.loadError} <button onClick={() => window.location.reload()}>Спробувати знову</button></p>}
+    {invalidTags && <p role="alert">Один із тегів недоступний. Скиньте фільтр.</p>}
+    {!props.loadError && !invalidTags && <section aria-label="Категорії продуктів" className="category-list">
+      {!props.categories.length && <p className="category-empty">Створіть категорію через «+», щоб додати продукт.</p>}
+      {props.categories.map(category => <CategorySection key={category.id} {...props} category={category} selectedTags={selectedTags ?? []} initial={initial} initialFilter={initialFilter} />)}
+    </section>}
+  </main>;
 }

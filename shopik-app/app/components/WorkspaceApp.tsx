@@ -9,6 +9,7 @@ import AppHeader from './AppHeader';
 import ProductList from './ProductList';
 import ExpenseList from './ExpenseList';
 import SettingsPanel from './SettingsPanel';
+import CreateAction from './CreateAction';
 
 // One mounted shell owns shared metadata. Screens consume the same scoped query
 // cache, so prefetched data is invalidated by mutations before it can be reused.
@@ -91,6 +92,7 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
       : screen === 'expenses' ? <ExpenseList membershipVersion={boot.membershipVersion} userId={boot.userId} workspace={boot.workspace} tags={metadata.tags} initialFilter={boot.initialFilter.kind === 'expenses' ? boot.initialFilter : { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] }}
         initial={boot.initialFilter.kind === 'expenses' ? boot.initial : undefined} loadError={metadata.tagsError} />
       : null}
+    {screen !== 'settings' && <CreateAction key={boot.workspace.workspace_id} boot={metadata} onChange={changed} />}
     <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel active={screen==='settings'} boot={metadata} onChange={changed} /></div>
   </div>;
 }

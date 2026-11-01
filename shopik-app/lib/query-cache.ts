@@ -91,6 +91,9 @@ export class QueryCache {
         entry.at = previousAt;
       } else if (data.deleted && entry.data.expenses) {
         entry.data = { ...entry.data, expenses: withoutExpenses(entry.data.expenses, new Set([data.deleted])) };
+      } else if (data.expense && entry.data.expenses) {
+        // Recompute every cached period/tag result from its own rows in kopecks.
+        entry.data = { ...entry.data, expenses: withoutExpenses({ ...entry.data.expenses, items: entry.data.expenses.items.map(item => item.id === data.expense!.id ? { ...item, amount: data.expense!.amount } : item) }, new Set()) };
       }
     }
     this.emit();

@@ -1,6 +1,6 @@
 "use client";
 import { canDeleteExpense } from '@/lib/permissions';
-import AnimatedNumber from "./AnimatedNumber";
+
 import { mutateProduct } from "@/lib/mutate-product";
 import { useSearchParams } from "next/navigation";
 import { currentKyivMonth, isExpenseMonth } from "@/lib/expenses";
@@ -9,14 +9,12 @@ import { useList, navigateList } from "@/lib/use-list";
 import type { ListData, ListFilter } from "@/lib/list-model";
 import type { Tag } from "@/lib/tags";
 import ExpenseChart from "./ExpenseChart";
-import AuthorInfo from "./AuthorInfo";
+import { useState } from 'react';
+import type { Expense } from '@/lib/expenses';
+import OrderCard from './OrderCard';
+import ExpensePriceDialog from './ExpensePriceDialog';
 import TagFilter from "./TagFilter";
-import TagBadge from "./TagBadge";
 
-const date = new Intl.DateTimeFormat("uk-UA", {
-  timeZone: "Europe/Kyiv",
-  dateStyle: "medium",
-});
 
 // Month, rows and totals switch as one keyed snapshot, never mixing filters.
 export default function ExpenseList({
@@ -37,6 +35,7 @@ export default function ExpenseList({
   loadError: boolean;
 }) {
   const params = useSearchParams();
+  const [editing, setEditing] = useState<{ expense: Expense; trigger: HTMLElement } | null>(null);
   const month = isExpenseMonth(params.get("month"))
     ? params.get("month")!
     : currentKyivMonth();
@@ -71,9 +70,9 @@ export default function ExpenseList({
   return (
     <div className="flex flex-1 flex-col bg-page text-foreground">
       {/* Shared authenticated navigation. */}
-      <main className="app-main space-y-6">
+      <main className="app-main mobile-main expense-main space-y-4">
         <h1 className="font-semibold">Витрати</h1>
-        <p>{workspace.workspace_name}</p>
+
         {query.error && (
           <p role="alert">
             {query.error}{" "}
@@ -86,7 +85,7 @@ export default function ExpenseList({
         )}
         {/* Changing the month retains all tag filters, including before hydration. */}
         <form
-          className="flex flex-wrap items-end gap-3"
+          className="expense-time-filter flex flex-wrap items-end gap-2"
           action="/expenses"
           onSubmit={(event) => {
             event.preventDefault();
@@ -123,7 +122,7 @@ export default function ExpenseList({
           </div>
           <button className="rounded button-primary px-4 py-2">Показати</button>
         </form>
-        <div className="shopping-layout">
+        <div className="expense-layout">
           <aside>
             {" "}
             <TagFilter
@@ -165,47 +164,12 @@ export default function ExpenseList({
                     Покупки
                   </h2>
                   <ul className="product-rows">
-                    {data.items.map((expense) => (
-                      <li key={expense.id} className="product-row expense-row">
-                        <div className="min-w-0 space-y-2">
-                          <h3 className="break-words font-semibold">
-                            {expense.name}
-                          </h3>
-                          <p>
-                            {expense.category_name} ·{" "}
-                            {date.format(new Date(expense.occurred_at))}
-                          </p>
-                          <ul
-                            aria-label="Теги покупки"
-                            className="flex flex-wrap gap-2"
-                          >
-                            {(expense.tags ?? []).map((tag) => (
-                              <li key={tag.id}>
-                                <TagBadge tag={tag} />
-                              </li>
-                            ))}
-                          </ul>
-                          <AuthorInfo
-                            author={expense.author ?? authors.get(expense.product_id)}
-                          />
-                        </div>
-                        <div className="product-end space-y-2 flex flex-col items-end justify-between gap-2">
-                          <p className="product-price">
-                            <AnimatedNumber value={expense.amount} />{" "}
-                            <small className="text-muted">UAH</small>
-                          </p>
-                          {canDeleteExpense(userId, expense) && <button
-                            className="rounded border border-danger px-3 py-2 text-danger "
-                            onClick={() =>
-                              remove(expense.product_id, expense.name)
-                            }
-                          >
-                            Видалити
-                          </button>}
-                          {expense.archived && <p className="text-sm text-muted">Архівна покупка</p>}
-                        </div>
-                      </li>
-                    ))}
+                    {data.items.map(expense => <li key={expense.id}>
+                      <OrderCard expense canManage={canDeleteExpense(userId, expense)} pending={query.pending.some(operation => operation.id === expense.product_id)}
+                        product={{ id: expense.product_id, workspace_id: expense.workspace_id, created_by: expense.created_by ?? '', category_id: expense.category_id, name: expense.name, description: '', price: expense.amount, currency: expense.currency, status: 'completed', created_at: expense.occurred_at, updated_at: expense.occurred_at, tags: expense.tags ?? [] }}
+                        author={expense.author ?? authors.get(expense.product_id)} onEdit={trigger => setEditing({ expense, trigger })} onStatus={() => {}} onDelete={() => remove(expense.product_id, expense.name)} />
+                      {expense.archived && <span className="sr-only">Архівна покупка</span>}
+                    </li>)}
                   </ul>
                 </section>
               </>
@@ -213,6 +177,7 @@ export default function ExpenseList({
           </div>
         </div>
       </main>
+      {editing && <ExpensePriceDialog expense={editing.expense} trigger={editing.trigger} workspaceId={workspace.workspace_id} scope={query.scope} onClose={() => setEditing(null)} />}
     </div>
   );
 }

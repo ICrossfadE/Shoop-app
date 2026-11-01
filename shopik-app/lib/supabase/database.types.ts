@@ -45,6 +45,7 @@ export type Database = {
       preview_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
       accept_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
 
+      correct_expense_price: { Args: { p_workspace_id: string; p_expense_id: string; p_operation_id: string; p_amount: number; p_expected_amount: number }; Returns: number };
       workspace_people: { Args: { p_workspace_id: string }; Returns: import('../members').WorkspacePerson[] };
       remove_workspace_member: { Args: { p_workspace_id: string; p_user_id: string; p_joined_at: string }; Returns: undefined };
 

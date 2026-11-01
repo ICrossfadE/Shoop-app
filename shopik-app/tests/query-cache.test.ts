@@ -155,3 +155,22 @@ test('revocation purges only the targeted Workspace including late reads', async
   assert.equal(cache.view('u:revoked',filter),undefined);
   assert.equal(cache.view('u:personal',filter)?.products[0].id,'keep');
 });
+
+// Corrected actual amounts must update all cached tag/period totals, retaining order.
+test('price correction updates matching expense snapshots and rolls back rejected writes', () => {
+  const cache = new QueryCache();
+  const month: ListFilter = { kind: 'expenses', category: '', tags: [], month: '2026-11' };
+  const items = ['1', '2'].map(id => ({ id, product_id: id, workspace_id: 'w', name: id, category_id: 'food', category_name: 'Food', amount: .1, currency: 'UAH' as const, occurred_at: '2026-11-01' }));
+  const data: ListData = { products: [], authors: [], expenses: { items, total: .2, categories: [] } };
+  cache.seed('u:w', month, data);
+  cache.seed('u:w', { ...month, tags: ['t'] }, { ...data, expenses: { items: [items[0]], total: .1, categories: [] } });
+  cache.seed('other:w', month, data);
+  cache.begin('failed-price', {scope: 'u:w', id: '1'}); cache.finish('failed-price');
+  assert.equal(cache.view('u:w', month)?.expenses?.total, .2);
+  cache.begin('price', {scope: 'u:w', id: '1'}); cache.finish('price', {expense: {id: '1', amount: .2}});
+  assert.equal(cache.view('u:w', month)?.expenses?.total, .3);
+  assert.equal(cache.view('u:w', { ...month, tags: ['t'] })?.expenses?.total, .2);
+  assert.equal(cache.view('other:w', month)?.expenses?.total, .2);
+  assert.deepEqual(cache.view('u:w', month)?.expenses?.items.map(item => item.id), ['1', '2']);
+  assert.equal(cache.view('u:w', month)?.expenses?.categories[0].count, 2);
+});
