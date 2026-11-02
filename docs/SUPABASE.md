@@ -126,3 +126,7 @@ Hosted Supabase не змінювався. Актуальний звіт і ме
 У Supabase Authentication → URL Configuration додати точний production callback `https://ВАШ-ДОМЕН/auth/callback?flow=personal` та відповідний dev callback. Зберегти звичайний `/auth/callback` і `?flow=invite`. Site URL має бути публічним production-доменом. Callback Google Cloud залишається Supabase `/auth/v1/callback`.
 
 Поле запрошення приймає тільки посилання з поточного origin застосунку. Після зміни домену створювати посилання на новому публічному домені; старі домени автоматично не довіряються. Змін Supabase/Google/Vercel агент не застосовував. Фактичний набір hosted-міграцій й реальний OAuth після змін потребують перевірки: локальні SQL та OAuth fixture цього не підтверджують. Звіт: `docs/testing/016-workspaces/README.md`.
+
+## Етап 018 — назви просторів
+
+Після наявної міграції `202611010013_expense_price.sql` застосувати лише нову `supabase/migrations/202611020014_workspace_names.sql`. Вона додає право оновлювати тільки `workspaces.name`, RLS власника-члена та перевірку нових назв. Старі рядки не переписуються; NOT VALID дозволяє зберегти можливі старі некоректні назви до їх виправлення, але перевіряє кожен новий запис/оновлення. Старі міграції не повторювати. Запустити весь `supabase/tests/workspace_names.sql` на тестовій копії схеми (ROLLBACK), потім розгорнути код. Без міграції форма поверне помилку збереження. Нових залежностей чи env-змін немає. Звіт: `docs/testing/018-actions-workspace/README.md`.

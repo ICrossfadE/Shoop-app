@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
   if (!isWorkspaceId(wid)) return reply({ error: 'Некоректний простір.' }, 400);
   const client = await workspaceClient(wid);
   if (!client) return reply({ error: 'Немає доступу.' }, 403);
-  const [categories, tags, theme] = await Promise.all([
+  const [categories, tags, theme, workspace] = await Promise.all([
     client.from('categories').select('*').eq('workspace_id', wid).order('created_at').order('id'),
     client.from('tags').select('*').eq('workspace_id', wid).order('name').order('id'), readTheme(),
+    client.from('workspaces').select('name').eq('id',wid).single(),
   ]);
-  if (categories.error || tags.error || theme.error) return reply({ error: 'Не вдалося оновити довідники.' }, 503);
-  return reply({ categories: categories.data, tags: tags.data, theme, userId: theme.userId });
+  if (categories.error || tags.error || theme.error || workspace.error) return reply({ error: 'Не вдалося оновити довідники.' }, 503);
+  return reply({ categories: categories.data, tags: tags.data, theme, userId: theme.userId, workspaceName: workspace.data.name });
 }

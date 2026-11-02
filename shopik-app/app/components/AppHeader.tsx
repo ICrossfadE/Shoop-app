@@ -7,9 +7,11 @@ import Avatar from "./Avatar";
 export default function AppHeader({
   account,
   page,
+  workspace,
 }: {
   account: Account;
   page: "products" | "expenses" | "settings";
+  workspace?: { workspace_id: string; workspace_name: string; member_role: 'owner' | 'member' };
 }) {
   return (
     <header className="app-header">
@@ -49,6 +51,8 @@ export default function AppHeader({
           </Link>
         </div>
       </div>
+      {/* Name, ownership and short ID distinguish spaces even with identical names. */}
+      {workspace && <p className="workspace-context"><strong>{workspace.workspace_name}</strong> · {workspace.member_role === 'owner' ? 'Мій простір' : 'Запрошений простір'} · {workspace.workspace_id.slice(0,8)}</p>}
     </header>
   );
 }

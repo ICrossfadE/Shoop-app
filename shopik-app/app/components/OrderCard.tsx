@@ -167,7 +167,7 @@ export default function OrderCard({
                 id={menuId}
                 className="product-menu-panel"
                 style={{position:'fixed',inset:'auto',margin:0,maxWidth:'calc(100vw - 16px)',maxHeight:'calc(100dvh - 16px)',overflowY:'auto'}}
-                aria-label="Дії продукту"
+                aria-label={expense ? 'Дії витрати' : 'Дії продукту'}
               >
                 {(!completed || expense) && (
                   <button
@@ -178,7 +178,7 @@ export default function OrderCard({
                       onEdit(trigger.current!);
                     }}
                   >
-                    {expense ? 'Змінити ціну' : 'Редагувати'}
+                    {expense ? 'Редагувати суму' : 'Редагувати'}
                   </button>
                 )}
                 <button

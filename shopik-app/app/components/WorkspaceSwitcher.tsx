@@ -4,9 +4,10 @@ import { listWorkspaces, openPersonalWorkspace, selectWorkspace } from '../setti
 import { listCache } from '@/lib/use-list';
 import type { WorkspaceOption } from '@/lib/members';
 import JoinWorkspace from './JoinWorkspace';
+import WorkspaceNameForm from './WorkspaceNameForm';
 
 // This section remains available even for a single space or a failed people request.
-export default function WorkspaceSwitcher({workspaceId,active}:{workspaceId:string;active:boolean}) {
+export default function WorkspaceSwitcher({workspaceId,active,onRenamed}:{workspaceId:string;active:boolean;onRenamed?:(id:string,name:string)=>void}) {
   const [options,setOptions] = useState<WorkspaceOption[]>([]);
   const [error,setError] = useState('');
   const [loaded,setLoaded] = useState(false);
@@ -46,7 +47,9 @@ export default function WorkspaceSwitcher({workspaceId,active}:{workspaceId:stri
     {!loaded&&!error&&<p role="status">Завантажуємо простори…</p>}
     {error&&<p role="alert" className="text-danger">{error} <button disabled={busy} onClick={()=>void refresh()} className="underline">Повторити</button></p>}
     <ul className="space-y-3">{options.map(option=><li key={option.id} className="flex min-w-0 flex-col items-start gap-3 rounded border p-3 sm:flex-row sm:items-center">
-      <div className="w-full min-w-0 break-words sm:flex-1"><p className="font-semibold">{option.name}</p><p className="text-sm text-muted">{option.personal?'Мій особистий простір':option.role==='owner'?'Мій спільний простір':'Запрошений простір'} · {option.role==='owner'?'Власник':'Учасник'} · {option.id.slice(0,8)}</p></div>
+      <div className="w-full min-w-0 break-words sm:flex-1"><p className="font-semibold">{option.name}</p><p className="text-sm text-muted">{option.personal?'Мій особистий простір':option.role==='owner'?'Мій спільний простір':'Запрошений простір'} · {option.role==='owner'?'Власник':'Учасник'} · {option.id.slice(0,8)}</p>
+        {option.role==='owner' && <WorkspaceNameForm key={option.id} workspaceId={option.id} name={option.name} onSaved={name=>{setOptions(previous=>previous.map(space=>space.id===option.id?{...space,name}:space));onRenamed?.(option.id,name);}} />}
+      </div>
       {option.id===workspaceId?<span aria-current="true" className="text-sm font-semibold">Поточний</span>:<button disabled={busy} onClick={()=>open(option.id)} className="button-primary px-4 py-3">Відкрити простір</button>}
     </li>)}</ul>
     <button disabled={busy||!loaded} onClick={()=>open()} className="rounded border px-4 py-3">{options.some(option=>option.personal)?'Відкрити мій простір':'Створити мій простір'}</button>

@@ -31,14 +31,14 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
       if (listCache.owner !== boot.userId) return;
       if (response.status === 401 || response.status === 403) { await listCache.clear(); window.location.replace('/login'); return; }
       if (!response.ok) throw new Error('Metadata unavailable');
-      const next: Pick<WorkspaceBoot, 'categories' | 'tags' | 'theme' | 'userId'> = await response.json();
+      const next: Pick<WorkspaceBoot, 'categories' | 'tags' | 'theme' | 'userId'> & { workspaceName: string } = await response.json();
       if (listCache.owner !== boot.userId) return;
       if (next.userId !== boot.userId) { await listCache.clear(); window.location.replace('/login'); return; }
       if (state.generation !== generation) return;
       const signature = JSON.stringify([next.categories, next.tags]);
       if (catalog.current !== signature) { catalog.current = signature; listCache.invalidateLocal(scope); listCache.invalidate(scope); }
       state.at = Date.now();
-      setMetadata((previous) => ({ ...previous, ...next, categoriesError: false, tagsError: false }));
+      setMetadata((previous) => ({ ...previous, ...next, workspace: {...previous.workspace, workspace_name: next.workspaceName}, categoriesError: false, tagsError: false }));
       setError('');
     } catch { setError('Не вдалося оновити довідники. Показано останні збережені дані.'); }
     finally { state.loading = false; if (state.generation !== generation && listCache.owner === boot.userId) void refresh(true); }
@@ -83,7 +83,7 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
     }));
   }
   return <div className="flex flex-1 flex-col bg-page text-foreground">
-    <AppHeader account={boot.account} page={screen} />
+    <AppHeader account={boot.account} page={screen} workspace={metadata.workspace} />
     {error && <aside role="alert" className="app-main">{error} <button onClick={() => refresh(true)}>Спробувати знову</button></aside>}
     {screen === 'products' ? <ProductList membershipVersion={boot.membershipVersion} userId={boot.userId} workspaceId={boot.workspace.workspace_id} workspaceName={boot.workspace.workspace_name} role={boot.workspace.member_role} account={boot.account} email={boot.email}
       categories={metadata.categories} tags={metadata.tags} hasInitial={!!boot.initial && boot.initialFilter.kind === 'products'} selectedCategory={boot.initialFilter.kind === 'products' ? boot.initialFilter.category : metadata.categories[0]?.id ?? ''}
@@ -93,6 +93,11 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
         initial={boot.initialFilter.kind === 'expenses' ? boot.initial : undefined} loadError={metadata.tagsError} />
       : null}
     {screen !== 'settings' && <CreateAction key={boot.workspace.workspace_id} boot={metadata} onChange={changed} />}
-    <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel active={screen==='settings'} boot={metadata} onChange={changed} /></div>
+    <div hidden={screen !== 'settings'} style={{ display: screen === 'settings' ? 'contents' : 'none' }}><SettingsPanel active={screen==='settings'} boot={metadata} onChange={changed} onWorkspaceRenamed={(id,name)=>{
+      // Discard any metadata request started before the confirmed rename.
+      freshness.current.generation++;
+      freshness.current.at = 0;
+      if(id===metadata.workspace.workspace_id) setMetadata(previous=>({...previous,workspace:{...previous.workspace,workspace_name:name}}));
+    }} /></div>
   </div>;
 }

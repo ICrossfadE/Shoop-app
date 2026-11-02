@@ -31,6 +31,15 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
   output: string; errors: string[];
 }) {
   const origin = 'http://127.0.0.1:3191';
+  // Optimistic disappearance precedes commit; verify the persisted result separately.
+  async function expectDeleted(table: 'products' | 'expenses', name: string) {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const result = await db.query(`select count(*) n from public.${table} where workspace_id=$1 and name=$2`, [wid,name]);
+      if (Number(result.rows[0].n) === 0) return;
+      await new Promise(resolve => setTimeout(resolve,100));
+    }
+    assert.fail(`${table}: deletion did not persist for ${name}`);
+  }
   await owner.goto(origin + '/');
   await owner.getByRole('heading', {name: 'Список продуктів', exact: true}).waitFor();
   await owner.getByRole('heading', {name: 'Home item', exact: true}).waitFor();
@@ -62,6 +71,17 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
   await dialog.waitFor({state: 'hidden'});
   await owner.getByRole('heading', {name: 'Нова покупка', exact: true}).waitFor();
 
+  // Visible three-dot actions work on the narrowest supported viewport.
+  await owner.setViewportSize({width: 320, height: 850});
+  const editTrigger = owner.getByRole('button', {name: 'Дії: Нова покупка'});
+  assert.equal(await editTrigger.evaluate(element => element.getBoundingClientRect().width >= 44), true);
+  await editTrigger.click();
+  await owner.getByRole('button', {name: 'Редагувати', exact: true}).click();
+  await dialog.getByLabel('Ціна, грн', {exact: true}).fill('36,20');
+  await dialog.getByRole('button', {name: 'Зберегти', exact: true}).click();
+  await dialog.waitFor({state: 'hidden'});
+  await owner.locator('article').filter({hasText: 'Нова покупка'}).filter({hasText: '36,20'}).waitFor();
+
   // A press with movement must not open actions; a stationary hold must open them.
   const card = owner.locator('article').filter({hasText: 'Нова покупка'});
   const bounds = await card.boundingBox(); assert.ok(bounds);
@@ -77,18 +97,19 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
   await owner.goto(origin + '/expenses');
   const expense = owner.locator('article').filter({hasText: 'Нова покупка'});
   await expense.getByRole('button', {name: 'Дії: Нова покупка'}).click();
-  await owner.getByRole('button', {name: 'Змінити ціну', exact: true}).click();
+  await owner.getByRole('button', {name: 'Редагувати суму', exact: true}).click();
   await dialog.getByLabel('Ціна, грн', {exact: true}).fill('40,01');
   await dialog.getByRole('button', {name: 'Зберегти', exact: true}).click();
   await dialog.waitFor({state: 'hidden'});
   const actual = await db.query("select amount from public.expenses where workspace_id=$1 and name='Нова покупка'", [wid]);
   assert.equal(Number(actual.rows[0].amount), 40.01);
+  assert.equal(Number((await db.query("select price from public.products where workspace_id=$1 and name='Нова покупка'", [wid])).rows[0].price), 36.2);
   await expense.filter({hasText: '40,01'}).waitFor();
   assert.equal(await expense.getByRole('button', {name: 'Дії: Нова покупка'}).evaluate(element => element === document.activeElement), true);
 
   // Lost response after commit must permit retry without a second correction.
   await expense.getByRole('button', {name: 'Дії: Нова покупка'}).click();
-  await owner.getByRole('button', {name: 'Змінити ціну', exact: true}).click();
+  await owner.getByRole('button', {name: 'Редагувати суму', exact: true}).click();
   await dialog.getByLabel('Ціна, грн', {exact: true}).fill('41,02');
   await owner.route('**/expenses', async route => {
     if (route.request().method() === 'POST') { await route.fetch(); await route.abort(); await owner.unroute('**/expenses'); }
@@ -123,10 +144,25 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
   // Filtering must also filter each collapsed category's total.
   await owner.goto(origin + '/');
   await owner.getByRole('button', {name: 'Додати тег Мобільний тег'}).click();
+  const chosenTag = owner.getByRole('button', {name: 'Прибрати тег Мобільний тег'});
+  assert.equal(await chosenTag.evaluate(element => getComputedStyle(element).boxShadow), 'none');
+  await owner.keyboard.press('Shift+Tab'); await owner.keyboard.press('Tab');
+  assert.equal(await chosenTag.evaluate(element => element.matches(':focus-visible') && getComputedStyle(element).outlineStyle === 'dashed'), true);
   await owner.waitForFunction(() => document.querySelectorAll('.category-panel[aria-busy="false"]').length === 3 && document.querySelectorAll('.product-cards article').length === 0);
   assert.equal(await owner.locator('.category-sum').first().evaluate(element => element.textContent?.includes('0,00')), true);
   await owner.getByRole('button', {name: 'Скинути', exact: true}).click();
   await owner.getByRole('heading', {name: 'Delete me', exact: true}).waitFor();
+
+  // Rename persists and updates the mounted header without a page reload.
+  await owner.goto(origin + '/settings');
+  const ownSpace = owner.locator('#workspaces li').filter({hasText: 'Поточний'});
+  await ownSpace.getByRole('textbox').fill('Наша оселя');
+  await ownSpace.getByRole('button', {name: 'Зберегти назву', exact: true}).click();
+  await owner.locator('.workspace-context').filter({hasText: 'Наша оселя'}).waitFor();
+  assert.equal((await db.query('select name from public.workspaces where id=$1', [wid])).rows[0].name, 'Наша оселя');
+  await owner.reload();
+  await owner.locator('.workspace-context').filter({hasText: 'Наша оселя'}).waitFor();
+  assert.equal(await owner.locator('.workspace-context').evaluate(element => element.textContent?.includes('Мій простір')), true);
 
   let layouts = 0;
   for (const theme of ['light','dark','pink','light-blue','light-green','light-pink']) {
@@ -141,6 +177,13 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
         assert.equal(await owner.locator('html').getAttribute('data-theme'), theme);
         assert.equal(await owner.locator('html').evaluate(element => element.scrollWidth > window.innerWidth), false, theme + '/' + width + route);
         assert.equal(await owner.locator('.create-fab').count(), route === '/settings' ? 0 : 1);
+        if (route !== '/settings') {
+          const total = owner.locator(route === '/' ? '.category-sum' : '.expense-summary strong').first();
+          assert.equal(await total.evaluate(element => Number(getComputedStyle(element).fontWeight) >= 800), true);
+          assert.equal(await total.evaluate(element => getComputedStyle(element).color), theme === 'dark' ? 'rgb(140, 229, 172)' : 'rgb(23, 107, 58)');
+          const trigger = owner.getByRole('button', {name: route === '/' ? 'Дії: Delete me' : 'Дії: Нова покупка'});
+          assert.equal(await trigger.evaluate(element => element.getBoundingClientRect().width >= 44), true);
+        }
         if (width === 390 || (theme === 'light' && [320,1440].includes(width))) await owner.screenshot({path: path.join(output, theme + '-' + width + (route === '/' ? '-products' : route.replace('/', '-')) + '.png'), fullPage: true});
         layouts++;
       }
@@ -173,6 +216,21 @@ export async function checkMobile({db,owner,wid,cid,uid,joinerId,pageFor,session
   await touchCard.evaluate(element => { element.dispatchEvent(new PointerEvent('pointerup', {bubbles: true, pointerType: 'touch'})); });
   await owner.getByRole('button', {name: 'Редагувати', exact: true}).click();
   await dialog.waitFor(); await owner.keyboard.press('Escape');
+  // Confirm deletion through both visible menus and verify persisted rows disappear.
+  await owner.goto(origin + '/expenses');
+  await owner.locator('html').evaluate(() => { window.confirm = () => true; });
+  await owner.getByRole('button', {name: 'Дії: Нова покупка'}).click();
+  await owner.getByRole('button', {name: 'Видалити', exact: true}).click();
+  await owner.getByRole('heading', {name: 'Нова покупка', exact: true}).waitFor({state: 'hidden'});
+  await owner.waitForFunction(() => !document.querySelector('[aria-busy="true"]'));
+  await expectDeleted('expenses','Нова покупка');
+  await owner.goto(origin + '/');
+  await owner.getByRole('button', {name: 'Дії: Home item'}).click();
+  await owner.getByRole('button', {name: 'Видалити', exact: true}).click();
+  await dialog.getByRole('button', {name: 'Видалити', exact: true}).click();
+  await owner.getByRole('heading', {name: 'Home item', exact: true}).waitFor({state: 'hidden'});
+  await owner.waitForFunction(() => !document.querySelector('[aria-busy="true"]'));
+  await expectDeleted('products','Home item');
   assert.deepEqual(errors, []);
   fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify({passed: true, isolated: true, layouts, themes: 6, widths: [320,360,390,768,1440], scenarios: ['creation x3','accordion toggle','filtered category totals','long press and movement cancellation','shared completion','actual price and lost-response retry','author controls','200% root text','short landscape modal','synthetic touch pointer and Escape focus'], hosted: false}, null, 2));
   console.log('PASS 017: creation x3, accordions, long press/cancel, shared completion, actual price/retry, author controls, ' + layouts + ' responsive layouts');

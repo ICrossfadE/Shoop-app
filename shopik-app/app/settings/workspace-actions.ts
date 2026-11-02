@@ -6,6 +6,21 @@ import { workspaceClient } from '@/lib/workspace';
 import { isWorkspaceId } from '@/lib/products';
 import { workspaceCookie, type WorkspaceOption, type WorkspacePerson } from '@/lib/members';
 import { selectPersonalWorkspace } from '@/lib/server-workspaces';
+import { parseWorkspaceName } from '@/lib/workspace-name';
+
+// RLS and column privileges enforce ownership even outside this server action.
+export async function renameWorkspace(id: string, value: string): Promise<{ok:true;name:string}|{ok:false;error:string}> {
+  const name = parseWorkspaceName(value);
+  if (!isWorkspaceId(id) || !name) return {ok:false,error:'Вкажіть назву від 1 до 100 символів без керівних символів.'};
+  try {
+    const client = await workspaceClient(id);
+    if (!client) return {ok:false,error:'Немає доступу до простору.'};
+    const result = await client.from('workspaces').update({name}).eq('id',id).select('name').maybeSingle();
+    if (result.error || !result.data) return {ok:false,error:'Не вдалося змінити назву. Дія доступна лише власнику; перевірте підключення та міграції Supabase.'};
+    revalidatePath('/','layout');
+    return {ok:true,name:result.data.name};
+  } catch { return {ok:false,error:'Не вдалося зберегти назву. Перевірте підключення й повторіть.'}; }
+}
 
 // Workspace discovery works independently of the currently selected space's people endpoint.
 export async function listWorkspaces(): Promise<{ok:true; options: WorkspaceOption[]}|{ok:false; error:string}> {

@@ -11,7 +11,7 @@ import TagManager from '../tags/TagManager';
 import ThemePicker from '../settings/ThemePicker';
 
 // Shared bootstrap makes settings available without a page roundtrip.
-export default function SettingsPanel({ boot, onChange, active=true }: { active?:boolean; boot: WorkspaceBoot; onChange: (change: MutationData) => void }) {
+export default function SettingsPanel({ boot, onChange, onWorkspaceRenamed, active=true }: { active?:boolean; boot: WorkspaceBoot; onChange: (change: MutationData) => void; onWorkspaceRenamed?: (id:string,name:string)=>void }) {
   const { workspace, account, email, theme } = boot;
   const tags = { data: boot.tags, error: boot.tagsError };
   const categories = { data: boot.categories, error: boot.categoriesError };
@@ -28,7 +28,7 @@ export default function SettingsPanel({ boot, onChange, active=true }: { active?
         <h2 id="appearance-title" className="text-lg font-semibold">Колірна тема</h2>
         {theme.error ? <div role="alert"><p>Не вдалося завантажити особисту тему.</p><RetryLoad /></div> : <ThemePicker />}
       </section>
-      <WorkspaceSwitcher key={workspace.workspace_id} workspaceId={workspace.workspace_id} active={active}/>
+      <WorkspaceSwitcher key={workspace.workspace_id} workspaceId={workspace.workspace_id} active={active} onRenamed={onWorkspaceRenamed}/>
       {/* These sections manage shared data in the current Workspace. */}
       <section id="tags" aria-labelledby="settings-tags-title" className="settings-wide scroll-mt-4 space-y-3 rounded-lg bg-surface p-5 shadow-sm">
         <h2 id="settings-tags-title" className="text-lg font-semibold">Теги</h2><p className="text-sm text-muted">Простір: {workspace.workspace_name}</p>
