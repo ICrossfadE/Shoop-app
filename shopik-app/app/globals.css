@@ -702,6 +702,8 @@ button:has(.tag-badge)[aria-pressed="true"] .tag-badge::before { content: '✓';
 .product-cards > .compact-product, .compact-product { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; padding: 8px 10px; background: var(--background); border: 1px solid var(--divider); border-radius: 10px; margin: 0; animation: none; }
 .compact-details { min-width: 0; }
 .compact-details h3 { font-size: .9375rem; line-height: 1.4; overflow-wrap: anywhere; }
+/* Preserve description paragraphs and wrap long words within narrow product cards. */
+.product-description { margin-top: 4px; font-size: .8125rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .compact-author { display: flex; align-items: center; gap: 6px; font-size: .6875rem; margin-top: 5px; }
 .compact-author > span > span, .compact-author img { width: 16px; height: 16px; font-size: 8px; }
 .compact-end { display: flex; flex-direction: row; align-items: start; grid-column: auto; flex-wrap: nowrap; gap: 4px; min-width: 0; }

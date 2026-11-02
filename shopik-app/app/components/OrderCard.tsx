@@ -94,9 +94,10 @@ export default function OrderCard({
         event.preventDefault(); event.stopPropagation();
       }}
     >
-      {/* Two compact rows: purchase name followed by author and local date. */}
+      {/* Show the optional description in every product card without reserving an empty row. */}
       <div className="compact-details">
         <h3 className="font-semibold">{product.name}</h3>
+        {product.description.trim() && <p className="product-description text-muted">{product.description}</p>}
         <CompactAuthor author={author} timestamp={product.created_at} />
         {pending && <span role="status" className="sr-only">Зберігається…</span>}
       </div>
