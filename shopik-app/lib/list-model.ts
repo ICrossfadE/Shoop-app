@@ -5,17 +5,18 @@ import type { ExpenseMonth } from './expenses';
 
 export type ListFilter = { kind: 'products' | 'expenses'; category: string; tags: string[]; month: string };
 export type ListData = { products: TaggedProduct[]; authors: ProductAuthor[]; expenses: ExpenseMonth | null };
-export type MutationData = { workspaceChanged?: boolean; expense?: { id: string; amount: number }; product?: TaggedProduct; author?: ProductAuthor; category?: Category; tag?: Tag; deleted?: string };
+export type MutationData = { workspaceChanged?: boolean; deletedTag?: string; completed?: string[]; expense?: { id: string; amount: number }; product?: TaggedProduct; author?: ProductAuthor; category?: Category; tag?: Tag; deleted?: string };
 export type MutationResult = { ok: true; data: MutationData } | { ok: false; error: string; ambiguous?: boolean; accessLost?: boolean; fields?: import('./products').ProductErrors };
 export type ProductDraft = { trigger?: HTMLElement; key: string; scope: string; userId: string; workspaceId: string; product: TaggedProduct | null; categories: Category[]; tags: Tag[]; selectedCategory: string };
+export type CompletionDraft = { key: string; scope: string; workspaceId: string; trigger?: HTMLElement; products: TaggedProduct[] };
 export type FailedMutation = { operationId: string; scope: string; workspaceId: string; id: string; mode: 'delete' | 'complete'; name: string; expense: boolean; error: string; ambiguous: boolean };
 
 // Stable order prevents duplicate cache entries for equivalent tag selections.
 export function listKey(scope: string, filter: ListFilter) {
-  return JSON.stringify([scope, filter.kind, filter.kind === 'products' ? filter.category : filter.month, [...new Set(filter.tags)].sort()]);
+  return JSON.stringify([scope, '019-or-quantity', filter.kind, filter.kind === 'products' ? filter.category : filter.month, [...new Set(filter.tags)].sort()]);
 }
 export function matches(product: TaggedProduct, filter: ListFilter) {
-  return product.status === 'active' && product.category_id === filter.category && filter.tags.every((id) => product.tags.some((tag) => tag.id === id));
+  return product.status === 'active' && (!filter.category || product.category_id === filter.category) && (!filter.tags.length || filter.tags.some((id) => product.tags.some((tag) => tag.id === id)));
 }
 
 // Derive both optimistic totals and rows from the same snapshot, using kopecks.

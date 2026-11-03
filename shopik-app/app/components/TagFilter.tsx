@@ -1,73 +1,32 @@
-"use client";
-import { useEffect, useOptimistic, useRef, useTransition } from "react";
-import { navigateList } from "@/lib/use-list";
-import TagBadge from "./TagBadge";
-import type { Tag } from "@/lib/tags";
+'use client';
+import { useSearchParams } from 'next/navigation';
+import { navigateList } from '@/lib/use-list';
+import TagBadge from './TagBadge';
+import type { Tag } from '@/lib/tags';
+import type { ReactNode } from 'react';
 
-// Exact optimistic sets plus a ref keep rapid clicks from losing earlier choices.
-export default function TagFilter({
-  tags,
-  selected,
-  action,
-  preserved,
-}: {
-  tags: Tag[];
-  selected: string[];
-  action: "/" | "/expenses";
-  preserved: { name: string; value: string };
+// Filters wrap inside an accessible accordion; unrelated URL selections survive.
+export default function TagFilter({ tags, selected, action, preserved, children, categoryCount }: {
+  tags: Tag[]; selected: string[]; action: '/' | '/expenses'; preserved: { name: string; value: string }; children?: ReactNode; categoryCount?: number;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [visible, showSelection] = useOptimistic(
-    selected,
-    (_previous: string[], next: string[]) => next,
-  );
-  const latest = useRef(selected);
-  // Back/forward and server navigation become the source of truth once settled.
-  useEffect(() => {
-    if (!pending) latest.current = selected;
-  }, [selected, pending]);
-
+  const current = useSearchParams();
   function apply(next: string[]) {
-    latest.current = next;
-    const params = new URLSearchParams({ [preserved.name]: preserved.value });
-    next.forEach((id) => params.append("tag", id));
-    startTransition(() => {
-      showSelection(next);
-      navigateList(`${action}?${params}`);
-    });
+    const params = new URLSearchParams(current.toString());
+    params.set(preserved.name, preserved.value); params.delete('tag');
+    next.forEach(id => params.append('tag', id));
+    navigateList(action + '?' + params);
   }
-  function toggle(id: string) {
-    apply(
-      latest.current.includes(id)
-        ? latest.current.filter((value) => value !== id)
-        : [...latest.current, id].sort(),
-    );
-  }
-  // One tag is always in exactly one block; buttons support keyboard activation.
-  function tagButton(tag: Tag, chosen: boolean) {
-    return (
-      <button
-        key={tag.id}
-        type="button"
-        aria-label={`${chosen ? "Прибрати" : "Додати"} тег ${tag.name}`}
-        onClick={() => toggle(tag.id)}
-        aria-pressed={chosen}
-        className="shrink-0"
-      >
-        <TagBadge tag={tag} />
-      </button>
-    );
-  }
-  return (
-    <section aria-label="Фільтр тегів" className="compact-filter">
-      {/* One horizontal row keeps chosen and available tags in stable order. */}
-      <div className="filter-caption"><span>Теги · усі вибрані</span>
-        <button type="button" onClick={() => apply([])} className="text-link">Скинути</button>
-        <span role="status" className="sr-only">{pending ? 'Оновлюємо результати…' : ''}</span>
-      </div>
-      <div className="tag-scroll">{tags.map(tag => tagButton(tag, visible.includes(tag.id)))}
-        {!tags.length && <span className="text-sm text-muted">Тегів ще немає</span>}
-      </div>
-    </section>
-  );
+  return <details className="filter-accordion compact-filter">
+    {/* Active selections remain visible when the filter controls are collapsed. */}
+    <summary>Фільтри · тегів: {selected.length}{categoryCount !== undefined ? ' · категорій для суми: ' + categoryCount : ''}</summary>
+    <div className="filter-panel">
+      <div className="filter-caption"><span>Теги · будь-який вибраний</span><button type="button" onClick={() => apply([])} className="text-link">Скинути теги</button></div>
+      <div className="tag-wrap">{tags.map(tag => <button key={tag.id} type="button" aria-label={(selected.includes(tag.id) ? 'Прибрати' : 'Додати') + ' тег ' + tag.name} aria-pressed={selected.includes(tag.id)} onClick={() => {
+        // Read the current URL at click time so rapid taps never lose a selection.
+        const latest = new URLSearchParams(window.location.search).getAll('tag');
+        apply(latest.includes(tag.id) ? latest.filter(id => id !== tag.id) : [...latest, tag.id]);
+      }}><TagBadge tag={tag} /></button>)}{!tags.length && <span className="text-muted">Тегів ще немає</span>}</div>
+      {children}
+    </div>
+  </details>;
 }

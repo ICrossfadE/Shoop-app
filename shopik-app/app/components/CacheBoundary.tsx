@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getSupabaseConfig } from '@/lib/supabase/config';
 import { listCache } from '@/lib/use-list';
 import OrderModal from './OrderModal';
+import CompleteProductsDialog from './CompleteProductsDialog';
 import { mutateProduct } from '@/lib/mutate-product';
 
 // Supabase broadcasts sign-out/account changes across tabs. Never retain another
@@ -23,6 +24,7 @@ export default function CacheBoundary() {
   }, []);
   // Keep in-flight forms mounted across route navigation, including failed drafts.
   return <><LocalDataStatus />
+    {[...listCache.completions.values()].map(draft => <CompleteProductsDialog key={draft.key} draft={draft} />)}
     {[...listCache.failures.values()].map((failure) => <aside key={failure.operationId} role="alert" className="mx-auto w-full max-w-4xl rounded border border-danger bg-surface p-4">
       <p>{failure.name}: {failure.error}</p>
       <button className="text-link underline" onClick={() => mutateProduct(failure.scope, failure.workspaceId, failure.id, failure.mode, failure.name, failure.expense)}>Повторити дію</button>

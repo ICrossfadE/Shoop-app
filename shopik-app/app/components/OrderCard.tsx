@@ -1,4 +1,5 @@
 "use client";
+import { productTotal, formatMoney } from '@/lib/money';
 import AnimatedNumber from "./AnimatedNumber";
 
 import type { TaggedProduct } from "@/lib/tags";
@@ -98,13 +99,14 @@ export default function OrderCard({
       <div className="compact-details">
         <h3 className="font-semibold">{product.name}</h3>
         {product.description.trim() && <p className="product-description text-muted">{product.description}</p>}
+        {!expense && (product.quantity ?? 1) > 1 && <p className="text-xs text-muted">{product.quantity} шт. × {formatMoney(product.price)}</p>}
         <CompactAuthor author={author} timestamp={product.created_at} />
         {pending && <span role="status" className="sr-only">Зберігається…</span>}
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
       <div className="product-end compact-end">
         <p className="product-price">
-          <AnimatedNumber value={product.price} />{" "}
+          <AnimatedNumber value={productTotal(product)} />{" "}
 
         </p>
         <div className="compact-actions">

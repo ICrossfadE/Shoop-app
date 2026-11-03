@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Expense } from '@/lib/expenses';
-import { parsePrice } from '@/lib/money';
+import { parsePrice, formatMoney } from '@/lib/money';
 import { correctExpensePrice } from '../expenses/actions';
 import { listCache, discardDeniedAccess } from '@/lib/use-list';
 import { lockDialogScroll } from '@/lib/dialog-scroll';
@@ -40,9 +40,10 @@ export default function ExpensePriceDialog({ expense, workspaceId, scope, trigge
   }
   return <dialog ref={dialog} className="product-dialog create-dialog" aria-labelledby="expense-price-title" onCancel={event => { event.preventDefault(); if (!pending && !ambiguous) onClose(); }}>
     {/* Only the actual amount is editable; historical metadata remains a snapshot. */}
-    <h2 id="expense-price-title">Фактична ціна</h2><p className="my-2 break-words">{expense.name}</p>
+    <h2 id="expense-price-title">Фактична сума покупки</h2><p className="my-2 break-words">{expense.name}</p>
+    <p className="text-sm text-muted">{expense.planned_amount == null ? 'Планова сума невідома' : 'План: ' + formatMoney(expense.planned_amount)}</p>
     <form onSubmit={submit} className="space-y-3" aria-busy={pending}>
-      <label htmlFor="actual-price" className="block">Ціна, грн</label>
+      <label htmlFor="actual-price" className="block">Повна сума, грн</label>
       <input autoFocus id="actual-price" inputMode="decimal" value={price} onChange={event => setPrice(event.target.value)} disabled={pending || ambiguous} aria-invalid={!!error} aria-describedby={error ? 'actual-price-error' : undefined} className="w-full rounded border p-2" />
       {error && <p id="actual-price-error" role="alert" className="text-danger">{error}</p>}
       {ambiguous && <p role="status">Повторіть збереження, щоб перевірити результат.</p>}

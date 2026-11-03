@@ -46,7 +46,7 @@ begin
   if (select count(*) from public.product_tags where product_id = pid) <> 2 then raise exception 'Tag link duplicates'; end if;
   if jsonb_array_length(public.filtered_products(wid, cid, '{}')) <> 3 then raise exception 'No-filter omitted untagged product'; end if;
   if jsonb_array_length(public.filtered_products(wid, cid, array[t1])) <> 2 then raise exception 'Single tag filter failed'; end if;
-  if jsonb_array_length(public.filtered_products(wid, cid, array[t1,t2])) <> 1 then raise exception 'AND tag filter failed'; end if;
+  if jsonb_array_length(public.filtered_products(wid, cid, array[t1,t2])) <> 2 then raise exception 'OR tag filter failed'; end if;
 
   begin
     insert into public.tags(workspace_id, name, color) values(wid, 'щотижня', '#000000');
@@ -91,7 +91,7 @@ begin
   result := public.expense_month_tags(wid, '2026-10-01', array[t1]);
   if (result->>'total')::numeric <> 100 or jsonb_array_length(result->'items') <> 2
     or (result->'categories'->0->>'total')::numeric <> 100 then raise exception 'Filtered totals duplicated/lost purchases'; end if;
-  if (public.expense_month_tags(wid, '2026-10-01', array[t1,t2])->>'total')::numeric <> 50 then raise exception 'AND expense filter failed'; end if;
+  if (public.expense_month_tags(wid, '2026-10-01', array[t1,t2])->>'total')::numeric <> 100 then raise exception 'OR expense filter failed'; end if;
   if (public.expense_month(wid, '2026-10-01')->>'total')::numeric <> 125 then raise exception 'Old unfiltered RPC regressed'; end if;
   if (public.expense_month_tags(wid, '2026-11-01', array[t1])->>'total')::numeric <> 0 then raise exception 'Filter escaped month'; end if;
   begin
@@ -153,4 +153,4 @@ begin
 end;
 $$;
 rollback;
-select 'PASS: tags, atomic save, AND filters, expense totals and RLS' as result;
+select 'PASS: tags, atomic save, OR filters, expense totals and RLS' as result;

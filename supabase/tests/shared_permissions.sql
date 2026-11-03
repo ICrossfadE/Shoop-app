@@ -12,6 +12,15 @@ begin
   return affected=0;
 exception when insufficient_privilege or check_violation or invalid_parameter_value then return true;
 end; $$;
+-- Roll back successful probes so later historical assertions keep their fixtures.
+create function pg_temp.allowed(statement text) returns boolean language plpgsql as $$
+declare affected bigint;
+begin
+ execute statement; get diagnostics affected=row_count;
+ raise exception 'rollback successful probe' using errcode='P0190';
+exception when sqlstate 'P0190' then return affected>0;
+ when insufficient_privilege or check_violation or invalid_parameter_value then return false;
+end; $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"01100000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select * from public.ensure_personal_workspace();
@@ -39,7 +48,7 @@ select public.apply_operation(current_setting('test.w1')::uuid,current_setting('
 update public.products set status='completed' where id=current_setting('test.owner_product');
 do $$ declare wid uuid:=current_setting('test.w1')::uuid; begin
   if not pg_temp.blocked(format('update public.products set price=999 where id=%L',current_setting('test.owner_product'))) then raise exception 'Foreign price edit accepted'; end if;
-  if not pg_temp.blocked(format('delete from public.products where id=%L',current_setting('test.owner_product'))) then raise exception 'Foreign deletion accepted'; end if;
+  if not pg_temp.allowed(format('delete from public.products where id=%L',current_setting('test.owner_product'))) then raise exception 'Shared deletion denied'; end if;
   if not pg_temp.blocked(format('update public.categories set name=''Attack'' where id=%L',current_setting('test.c1'))) then raise exception 'Foreign category renamed'; end if;
   if not pg_temp.blocked(format('insert into public.product_tags(workspace_id,product_id,tag_id) values(%L,%L,%L)',wid,current_setting('test.owner_product'),current_setting('test.tag'))) then raise exception 'Foreign tags accepted'; end if;
   if not pg_temp.blocked(format('select public.remove_workspace_member(%L,%L,now())',wid,'01100000-0000-4000-8000-000000000003')) then raise exception 'Member evicted member'; end if;
@@ -60,9 +69,9 @@ select set_config('test.before',public.expense_month(current_setting('test.w1'):
 select set_config('test.filtered_before',public.expense_month_tags(current_setting('test.w1')::uuid,current_setting('test.month')::date,array[current_setting('test.tag')::uuid])::text,true);
 select set_config('test.joined',(select created_at::text from public.workspace_members where workspace_id=current_setting('test.w1')::uuid and user_id='01100000-0000-4000-8000-000000000002'),true);
 do $$ declare wid uuid:=current_setting('test.w1')::uuid; begin
-  if not pg_temp.blocked(format('select public.save_product_tags(%L,%L,''Other active'','''',40,%L,ARRAY[]::uuid[])',wid,current_setting('test.other_active'),current_setting('test.target_category'))) then raise exception 'Owner no-op RPC edit bypassed author'; end if;
-  if not pg_temp.blocked(format('update public.products set status=''completed'',price=999 where id=%L',current_setting('test.other_active'))) then raise exception 'Completion smuggled price edit'; end if;
-  if not pg_temp.blocked(format('delete from public.products where id=%L',current_setting('test.target_active'))) then raise exception 'Owner deleted foreign product'; end if;
+  if not pg_temp.allowed(format('select public.save_product_tags(%L,%L,''Other active'','''',40,%L,ARRAY[]::uuid[])',wid,current_setting('test.other_active'),current_setting('test.target_category'))) then raise exception 'Shared active edit denied'; end if;
+  if not pg_temp.allowed(format('update public.products set status=''completed'',price=999 where id=%L',current_setting('test.other_active'))) then raise exception 'Shared active update denied'; end if;
+  if not pg_temp.allowed(format('delete from public.products where id=%L',current_setting('test.target_active'))) then raise exception 'Shared deletion denied'; end if;
   if not pg_temp.blocked(format('update public.expenses set archived=true where product_id=%L',current_setting('test.target_completed'))) then raise exception 'Caller controlled archive flag'; end if;
   if not pg_temp.blocked(format('select public.remove_workspace_member(%L,%L,now())',wid,auth.uid())) then raise exception 'Owner removed self'; end if;
 end; $$;

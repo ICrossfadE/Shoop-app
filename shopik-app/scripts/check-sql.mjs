@@ -30,7 +30,22 @@ async function main() {
           update public.expenses set occurred_at='2026-03-31T21:30:00Z'  ;`);
         beforeUpgrade=(await db.query("select amount::text,occurred_at::text,category_id::text,category_name,public.product_tag_list(workspace_id,product_id) tags from public.expenses")).rows[0];
       }
+      if (file.includes('shopping_workflow')) {
+        await db.exec(`insert into auth.users(id,email) values('01900000-0000-4000-8000-000000009999','upgrade019@example.invalid');
+          select set_config('request.jwt.claims','{"sub":"01900000-0000-4000-8000-000000009999"}',false);
+          set role authenticated; select * from public.ensure_personal_workspace();
+          select public.save_product_tags(workspace_id,null,'Pre-019 corrected expense','',70,(select id from public.categories limit 1),'{}') from public.workspace_members;
+          update public.products set status='completed';
+          select public.correct_expense_price(workspace_id,id,gen_random_uuid(),50,70) from public.expenses;
+          reset role;`);
+      }
       await db.exec(fs.readFileSync(path.join(root, 'migrations', file), 'utf8'));
+      if (file.includes('shopping_workflow')) {
+        const upgraded=(await db.query('select p.quantity,e.amount,e.planned_amount from public.products p join public.expenses e on e.product_id=p.id')).rows[0];
+        if(upgraded.quantity!==1 || Number(upgraded.amount)!==50 || upgraded.planned_amount!==null) throw new Error('019 upgrade changed old totals or fabricated a plan');
+        await db.exec("delete from public.workspaces where owner_id='01900000-0000-4000-8000-000000009999'; delete from auth.users where id='01900000-0000-4000-8000-000000009999';");
+        console.log('PASS pre-019 upgrade: quantity=1, corrected actual retained, unknown plan stays NULL');
+      }
       if (beforeUpgrade) {
         const after=(await db.query('select amount::text,occurred_at::text,category_id::text,category_name,tags,author from public.expenses')).rows[0];
         const {author,...values}=after;

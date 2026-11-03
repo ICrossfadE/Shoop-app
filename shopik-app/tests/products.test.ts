@@ -8,7 +8,7 @@ test('accepts zero, decimal comma, and exact two-digit money boundaries', () => 
   for (const [price, expected] of [['0', 0], ['0.01', 0.01], ['12,50', 12.5], ['99999999.99', 99999999.99]] as const) {
     const result = validateProduct({ category_id: categoryId, name: ' Молоко ', description: '', price });
     assert.equal(result.ok, true);
-    if (result.ok) assert.deepEqual(result.value, { category_id: categoryId, name: 'Молоко', description: '', price: expected });
+    if (result.ok) assert.deepEqual(result.value, { category_id: categoryId, name: 'Молоко', description: '', price: expected, quantity: 1 });
   }
 });
 
@@ -37,7 +37,7 @@ test('counts Unicode codepoints consistently with PostgreSQL character limits', 
 
 test('never forwards caller-supplied ownership, currency or status fields', () => {
   const result = validateProduct({ category_id: categoryId, name: 'Молоко', description: '', price: '50', created_by: 'other', workspace_id: 'other', currency: 'USD', status: 'completed' });
-  assert.deepEqual(result, { ok: true, value: { category_id: categoryId, name: 'Молоко', description: '', price: 50 } });
+  assert.deepEqual(result, { ok: true, value: { category_id: categoryId, name: 'Молоко', description: '', price: 50, quantity: 1 } });
 });
 
 test('rejects legacy IDs and injection-shaped identifiers', () => {

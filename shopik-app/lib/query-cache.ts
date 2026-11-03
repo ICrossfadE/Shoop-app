@@ -1,5 +1,5 @@
 import type { localStore } from './local-store.ts';
-import { listKey, matches, withoutExpenses, type ListData, type ListFilter, type MutationData, type ProductDraft, type FailedMutation } from './list-model.ts';
+import { listKey, matches, withoutExpenses, type ListData, type ListFilter, type MutationData, type ProductDraft, type FailedMutation, type CompletionDraft } from './list-model.ts';
 import type { TaggedProduct } from './tags';
 
 type Entry = { scope: string; filter: ListFilter; data?: ListData; at: number; error: string; loading: boolean; generation: number; promise?: Promise<void> };
@@ -11,6 +11,7 @@ export class QueryCache {
   entries = new Map<string, Entry>();
   overlays = new Map<string, Overlay>();
   drafts = new Map<string, ProductDraft>();
+  completions = new Map<string, CompletionDraft>();
   failures = new Map<string, FailedMutation>();
   listeners = new Set<() => void>();
   revision = 0;
@@ -22,13 +23,13 @@ export class QueryCache {
   constructor(ttl = 30_000, now = () => Date.now(), storage?: typeof localStore) { this.ttl = ttl; this.now = now; this.storage = storage; }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   emit = () => { this.revision++; this.listeners.forEach((listener) => listener()); };
-  clear() { const cleanup = this.owner ? this.storage?.clear(this.owner) : undefined; this.entries.clear(); this.overlays.clear(); this.drafts.clear(); this.failures.clear(); this.owner = ''; this.memberships.clear(); this.emit(); return cleanup; }
+  clear() { const cleanup = this.owner ? this.storage?.clear(this.owner) : undefined; this.entries.clear(); this.overlays.clear(); this.drafts.clear(); this.completions.clear(); this.failures.clear(); this.owner = ''; this.memberships.clear(); this.emit(); return cleanup; }
   // Compare a server-verified join epoch before any disk read, including form recovery.
   prepare(scope:string,version?:string) {
     if(!version || !this.owner || this.memberships.get(scope)?.version===version)return;
     const previous=this.memberships.get(scope);
     if(previous) {
-      for(const collection of [this.entries,this.overlays,this.drafts,this.failures]) {
+      for(const collection of [this.entries,this.overlays,this.drafts,this.completions,this.failures]) {
         for(const [key,value] of collection)if(value.scope===scope)collection.delete(key);
       }
     }
@@ -37,7 +38,7 @@ export class QueryCache {
   }
   // Purge a revoked Workspace even when SSR has already fallen back to the personal one.
   revoke(scope: string) {
-    for (const collection of [this.entries, this.overlays, this.drafts, this.failures]) {
+    for (const collection of [this.entries, this.overlays, this.drafts, this.completions, this.failures]) {
       for (const [key, value] of collection) if (value.scope === scope) collection.delete(key);
     }
     const cleanup = this.storage?.clearScope(scope); this.emit(); return cleanup;
@@ -46,7 +47,11 @@ export class QueryCache {
     if (draft.product && [...this.drafts.values()].some((other) => other.scope === draft.scope && other.product?.id === draft.product?.id)) return;
     this.drafts.set(draft.key, draft); this.emit();
   }
-  closeDraft(key: string) { const trigger = this.drafts.get(key)?.trigger; this.drafts.delete(key); this.emit(); if (trigger?.isConnected) trigger.focus(); }
+  // Confirmation lives beside product drafts so navigation cannot discard retry identity.
+  openCompletion(draft: CompletionDraft) { if (!this.completions.size) { this.completions.set(draft.key, draft); this.emit(); } }
+  closeCompletion(key: string) { const trigger = this.completions.get(key)?.trigger; this.completions.delete(key); this.emit(); if (trigger?.isConnected) requestAnimationFrame(() => { if (trigger.isConnected) trigger.focus(); }); }
+  // Wait for the dialog to unmount and release inertness before restoring focus.
+  closeDraft(key: string) { const trigger = this.drafts.get(key)?.trigger; this.drafts.delete(key); this.emit(); if (trigger?.isConnected) requestAnimationFrame(() => { if (trigger.isConnected) trigger.focus(); }); }
   activate(owner: string) { if (this.owner !== owner) { this.clear(); this.owner = owner; } }
   seed(scope: string, filter: ListFilter, data: ListData) {
     const key = listKey(scope, filter);
@@ -84,7 +89,7 @@ export class QueryCache {
       entry.generation++; entry.at = 0;
       if (!entry.data) continue;
       if (entry.filter.kind === 'products') {
-        let products = entry.data.products.filter((product) => product.id !== overlay.id && product.id !== data.product?.id && product.id !== data.deleted);
+        let products = entry.data.products.filter((product) => product.id !== overlay.id && product.id !== data.product?.id && product.id !== data.deleted && !data.completed?.includes(product.id));
         if (data.product && matches(data.product, entry.filter)) products = [data.product, ...products];
         entry.data = { ...entry.data, products, authors: data.author ? [...entry.data.authors.filter((author) => author.product_id !== data.author!.product_id), data.author] : entry.data.authors };
         // Do not extend the freshness of unrelated rows on every local mutation.

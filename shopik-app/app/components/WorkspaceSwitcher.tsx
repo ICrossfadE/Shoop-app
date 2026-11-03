@@ -29,8 +29,8 @@ export default function WorkspaceSwitcher({workspaceId,active,onRenamed}:{worksp
   },[active,refresh]);
   // A full shell reload prevents late metadata and mounted forms from crossing workspaces.
   function open(id?:string) {
-    if (busy || !navigator.onLine) {setError('Для перемикання потрібне підключення. Дочекайтеся завершення збереження.');return;}
-    if (listCache.drafts.size && !window.confirm('Перемкнути простір? Незбережені форми й локальні чернетки буде очищено.')) return;
+    if (busy || document.querySelector('[data-locked="true"]') || !navigator.onLine) {setError('Для перемикання потрібне підключення. Дочекайтеся завершення збереження.');return;}
+    if ((listCache.drafts.size + listCache.completions.size) && !window.confirm('Перемкнути простір? Незбережені форми й локальні чернетки буде очищено.')) return;
     startTransition(async()=>{
       try {
         const result = id ? await selectWorkspace(id) : await openPersonalWorkspace();

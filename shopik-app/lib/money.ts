@@ -14,3 +14,15 @@ export function parsePrice(value: unknown): number | null {
 export function formatMoney(amount: number) {
   return `${number.format(amount).replace(/\s/g, '\u00a0')}\u00a0₴`;
 }
+
+// Multiply integer kopecks; old snapshots without quantity represent one unit.
+export function productTotal(product: { price: number; quantity?: number }): number {
+  return Math.round(product.price * 100) * (product.quantity ?? 1) / 100;
+}
+
+// Unknown historical plans are excluded, never treated as a zero budget.
+export function savings(items: { amount: number; planned_amount?: number | null }[]) {
+  const known = items.filter(item => item.planned_amount != null);
+  const kopecks = known.reduce((sum, item) => sum + Math.round(item.planned_amount! * 100) - Math.round(item.amount * 100), 0);
+  return { amount: kopecks / 100, compared: known.length, total: items.length };
+}

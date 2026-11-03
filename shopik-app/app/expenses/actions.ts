@@ -4,7 +4,7 @@ import { isWorkspaceId } from '@/lib/products';
 import { parsePrice } from '@/lib/money';
 import type { MutationResult } from '@/lib/list-model';
 
-// RPC checks membership, authorship and archive status after obtaining its lock.
+// RPC checks membership and archive status after obtaining its lock.
 export async function correctExpensePrice(workspaceId: string, expenseId: string, operationId: string, price: string, expected: number): Promise<MutationResult> {
   const amount = parsePrice(price);
   if (!isWorkspaceId(workspaceId) || !isWorkspaceId(expenseId) || !isWorkspaceId(operationId) || amount === null || !Number.isFinite(expected)) return { ok: false, error: 'Вкажіть ціну від 0 до 99 999 999,99 грн, до двох знаків після коми.' };
@@ -15,7 +15,7 @@ export async function correctExpensePrice(workspaceId: string, expenseId: string
     if (result.error) {
       const messages: Record<string, string> = {
         '40001': 'Ціна вже змінилася. Закрийте форму й оновіть витрати.',
-        '42501': 'Змінювати можна лише власні неархівні витрати.',
+        '42501': 'Змінювати можна лише неархівні витрати поточного простору.',
         '22023': 'Некоректна ціна або ключ повторної операції.',
         'PGRST202': 'Потрібно застосувати міграцію 013 у Supabase.',
       };

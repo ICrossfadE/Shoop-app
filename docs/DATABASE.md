@@ -1,3 +1,25 @@
+## Виправлення відсутньої таблиці повторів — міграція 016
+
+Якщо тест 019 або correct_expense_price повертає 42P01 для shopik_private.expense_price_receipts, функція з 015 уже існує, але її залежність із 013 відсутня. Для цього стану додано окремий файл supabase/migrations/202611030016_expense_price_receipts_repair.sql. Застосувати його повністю після 015, потім повторити весь supabase/tests/shopping_workflow.sql. Якщо попередній запит залишив відкриту помилкову транзакцію, спершу окремо виконати ROLLBACK.
+
+016 створює таблицю лише за її відсутності, вмикає RLS, забороняє прямий доступ клієнтів і відновлює authenticated-only виконання RPC. Наявні receipts зберігаються; повторне виконання 016 безпечне. Не повторювати 013 поверх 015: її стара функція повернула б попереднє обмеження лише для автора.
+
+Перевірено check-expense-receipt-recovery.mts: точне відтворення 42P01 без 013, відновлення та повтор 016, збереження наявних receipts і закритих прав доступу; після відновлення пройшли expense_price.sql і shopping_workflow.sql. Повний SQL-прогін: 16 міграцій і 14 SQL/RLS-файлів. Hosted Supabase агентом не змінювався.
+
+## Міграція 015 — задача 019
+
+Файл: supabase/migrations/202611030015_shopping_workflow.sql. Застосовувати після 014.
+
+- products.quantity: integer NOT NULL DEFAULT 1, межі 1–1 000 000; price зберігає значення ціни за штуку. CHECK price * quantity <= 99 999 999.99. SHA256 ID та protected identity grants збережені.
+- expenses.planned_amount: nullable exact numeric до двох знаків. Нові витрати отримують price * quantity і таку саму початкову amount; план не змінюється RPC корекції. Старі витрати залишаються з NULL-планом.
+- tags.deleted_at: soft-delete; RLS приховує видалені теги, unique індекс назви діє лише на живий каталог. delete_workspace_tag перевіряє членство під workspace lock, видаляє активні зв’язки й зберігає завершені links та expense snapshots.
+- save_product_tags має новий варіант із p_quantity; старий варіант делегує з кількістю 1. apply_operation використовує новий варіант і підтримує delete_tag. filtered_products приймає NULL-категорію для однієї повної вибірки.
+- products та product_tags дозволяють взаємне керування чинним учасникам. Незмінність завершених полів, архіву, автора та обмеження категорій/просторів збережені. correct_expense_price дозволяє корекцію будь-якої неархівної витрати поточного простору.
+- complete_products(workspace,operation,items) приймає 1–500 snapshot-ів id/amount/updated_at, перевіряє їх під спільним workspace lock, завершує атомарно й записує receipt. Застарілий snapshot — 40001, повтор не дублює витрати.
+- OR-перевірки використовують EXISTS до агрегації: один рядок покупки рахується один раз. Історичні теги беруться з expense snapshot.
+
+[SQL/RLS та upgrade-перевірки](testing/019-shopping-workflow/README.md). Наведені нижче старі правила AND та author-only для покупок замінені цією міграцією.
+
 # База даних Shopik
 
 ## Коригування фактичної ціни 017

@@ -762,3 +762,44 @@ button:has(.tag-badge)[aria-pressed="true"] .tag-badge::before { content: '✓';
 
 /* Keep the active space visible on every screen, including narrow phones. */
 .workspace-context { padding: 0 16px 10px; max-width: 1240px; margin: auto; font-size: .8125rem; overflow-wrap: anywhere; }
+
+/* Task 019: independent category controls, wrapped filters and a persistent total. */
+.filter-accordion { border: 1px solid var(--divider); border-radius: 14px; background: var(--surface); padding: 0; }
+.filter-accordion > summary { cursor: pointer; min-height: 48px; padding: 12px; overflow-wrap: anywhere; }
+.filter-panel { padding: 0 12px 12px; min-width: 0; }
+.tag-wrap { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.tag-wrap > button { max-width: 100%; min-height: 44px; padding: 3px; }
+.sum-categories { border-top: 1px solid var(--divider); margin-top: 10px; padding-top: 10px; min-width: 0; }
+.sum-categories legend { font-weight: 600; padding-top: 10px; }
+.sum-categories > label { display: flex; align-items: center; gap: 8px; min-height: 44px; overflow-wrap: anywhere; }
+.sum-categories > button { min-height: 44px; margin-right: 12px; color: var(--link); }
+.category-heading { display: flex; align-items: stretch; min-width: 0; }
+.category-toggle { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; min-height: 56px; padding: 10px 12px; text-align: left; }
+.category-add { flex: 0 0 44px; min-height: 44px; font-size: 24px; }
+.category-panel[hidden] { display: none; }
+.selection-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: .875rem; }
+.selection-toolbar > button { min-height: 44px; }
+.selectable-product { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: start; }
+.product-select { display: grid; place-items: center; min-height: 48px; }
+.product-select input, .sum-categories input { width: 20px; height: 20px; flex-shrink: 0; }
+.shopping-total { position: fixed; left: 0; right: 0; bottom: 0; z-index: 24; padding: 12px 88px calc(18px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); min-height: 94px; background: var(--surface); border-top: 1px solid var(--divider); display: flex; flex-direction: column; justify-content: center; font-size: .8125rem; }
+.shopping-total strong { color: var(--amount-total); font-size: 1.125rem; font-weight: 800; overflow-wrap: anywhere; }
+.shopping-home { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+.inline-tag { border: 1px solid var(--divider); border-radius: 12px; padding: 12px; }
+.managed-tag { display: flex; align-items: center; min-width: 0; max-width: 100%; }
+.managed-tag .icon-action { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+.confirmation-items { max-height: 35dvh; overflow-y: auto; overflow-wrap: anywhere; }
+.savings-summary { border: 1px solid var(--divider); border-radius: 14px; padding: 12px; }
+.expense-plan { padding: 4px 10px 10px; overflow-wrap: anywhere; }
+/* Intrinsic chart/input sizes must never widen the document or trigger focus zoom. */
+.expense-layout, .shopping-content, .expense-summary, .expense-summary > *, .expense-time-filter > div, .donut { min-width: 0; max-width: 100%; }
+.expense-main { width: 100%; }
+.expense-time-filter input { min-width: 0; max-width: 100%; }
+@media (max-width: 767px) {
+  .product-dialog input:not([type="checkbox"]):not([type="color"]), .product-dialog select, .product-dialog textarea, .expense-time-filter input { font-size: 16px; }
+  .expense-summary .donut { width: 100%; }
+}
+@media (max-width: 359px) {
+  .selectable-product .compact-product { grid-template-columns: minmax(0, 1fr); }
+  .selectable-product .compact-end { justify-content: flex-end; max-width: 100%; }
+}

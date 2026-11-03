@@ -46,7 +46,7 @@ begin
 end; $$;
 select set_config('request.jwt.claims','{"sub":"01700000-0000-4000-8000-000000000001"}',true);
 do $$ begin
-  if not pg_temp.price_blocked(format('select public.correct_expense_price(%L,%L,gen_random_uuid(),77,0)',current_setting('test.price_workspace'),current_setting('test.price_expense'))) then raise exception 'Owner edited foreign expense'; end if;
+  if public.correct_expense_price(current_setting('test.price_workspace')::uuid,current_setting('test.price_expense')::uuid,gen_random_uuid(),77,0)<>77 then raise exception 'Shared price correction failed'; end if;
 end; $$;
 select set_config('request.jwt.claims','{"sub":"01700000-0000-4000-8000-000000000003"}',true);
 do $$ begin

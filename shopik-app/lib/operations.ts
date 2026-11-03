@@ -8,7 +8,7 @@ export async function operation(workspaceId: string, operationId: string, kind: 
   try {
     const client = await workspaceClient(workspaceId);
     if (!client) return { ok: false, error: 'Немає доступу. Оновіть сторінку.', accessLost: true };
-    if ((kind === 'save_product' || kind === 'delete_product' || kind === 'save_category' || kind === 'delete_category') && payload.id) {
+    if ((kind === 'save_category' || kind === 'delete_category') && payload.id) {
       const session = await client.auth.getClaims();
       const table = kind.endsWith('category') ? 'categories' : 'products';
       const record = await client.from(table).select('created_by').eq('workspace_id',workspaceId).eq('id',String(payload.id)).maybeSingle();
@@ -24,7 +24,7 @@ export async function operation(workspaceId: string, operationId: string, kind: 
         '23514': 'Перевірте дані. Завершений продукт можна лише видалити.',
         '42501': 'Немає доступу до запису. Оновіть сторінку.',
         '22023': 'Дані або ключ операції некоректні. Повторіть початкову дію.',
-        'PGRST202': 'Потрібно застосувати міграцію 008 у Supabase.',
+        'PGRST202': 'Потрібно застосувати міграцію 015 у Supabase.',
       };
       return { ok: false, error: messages[error.code] ?? 'Результат збереження невідомий. Повторіть з тими самими даними.', accessLost: error.code === '42501' && error.message === 'Workspace access denied', ambiguous: !messages[error.code] };
     }

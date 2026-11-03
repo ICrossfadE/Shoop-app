@@ -52,7 +52,7 @@ export default function AppHeader({
         </div>
       </div>
       {/* Name, ownership and short ID distinguish spaces even with identical names. */}
-      {workspace && <p className="workspace-context"><strong>{workspace.workspace_name}</strong> · {workspace.member_role === 'owner' ? 'Мій простір' : 'Запрошений простір'} · {workspace.workspace_id.slice(0,8)}</p>}
+      {workspace && <p className="workspace-context"><strong>{workspace.workspace_name}</strong> · {workspace.member_role === 'owner' ? 'Мій простір' : 'Запрошений простір'}</p>}
     </header>
   );
 }

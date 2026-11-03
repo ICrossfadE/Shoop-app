@@ -7,17 +7,19 @@ import { saveProduct } from '@/app/products/actions';
 import { validateProduct, type ProductErrors } from '@/lib/products';
 import type { Category } from '@/lib/categories';
 import type { Tag, TaggedProduct } from '@/lib/tags';
-import { ownsRecord } from '@/lib/permissions';
+import { createTag } from '../tags/actions';
+import { formatMoney, productTotal } from '@/lib/money';
+import { lastCategoryKey } from '@/lib/shopping';
 import { localStore } from '@/lib/local-store';
 import TagBadge from './TagBadge';
 
-type LocalDraft = { name: string; description: string; price: string; categoryId: string; tagIds: string[]; operationId: string; ambiguous: boolean };
+type LocalDraft = { name: string; description: string; price: string; quantity?: string; categoryId: string; tagIds: string[]; operationId: string; ambiguous: boolean };
 
 type Props = { scope: string; temporaryId: string; userId: string; workspaceId: string; product: TaggedProduct | null; categories: Category[]; tags: Tag[]; selectedCategory: string; onClose: () => void; onSaved: () => void };
 
 // Native dialog handles focus trapping, background inertness and keyboard navigation.
 export default function OrderModal({ scope, temporaryId, userId, workspaceId, product, categories, tags, selectedCategory, onClose, onSaved }: Props) {
-  const canEdit = !product || ownsRecord(userId, product);
+  const canEdit = !product || product.status === 'active';
   const dialog = useRef<HTMLDialogElement>(null);
   const submitting = useRef(false);
   const operationId = useRef(crypto.randomUUID());
@@ -25,6 +27,16 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   const [name, setName] = useState(product?.name ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [price, setPrice] = useState(product ? String(product.price) : '');
+  const [quantity, setQuantity] = useState(product ? String(product.quantity ?? 1) : '');
+  const [availableTags, setAvailableTags] = useState(tags);
+  const [addingTag, setAddingTag] = useState(false);
+  const [tagName, setTagName] = useState('');
+  const [tagColor, setTagColor] = useState('#2563EB');
+  const [tagPending, setTagPending] = useState(false);
+  const [tagAmbiguous, setTagAmbiguous] = useState(false);
+  const [tagError, setTagError] = useState('');
+  const tagOperation = useRef(crypto.randomUUID());
+  const tagBusy = useRef(false);
   const [categoryId, setCategoryId] = useState(product?.category_id ?? selectedCategory);
   const [tagIds, setTagIds] = useState<string[]>(product?.tags.map((tag) => tag.id) ?? []);
   const [fields, setFields] = useState<ProductErrors>({});
@@ -45,13 +57,13 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
   }, [userId, draftKey]);
   useEffect(() => {
     if (!storageReady || recovered || listCache.owner !== userId) return;
-    void localStore.write(userId, draftKey, { name, description, price, categoryId, tagIds, operationId: operationId.current, ambiguous } satisfies LocalDraft);
-  }, [storageReady, recovered, userId, draftKey, name, description, price, categoryId, tagIds, ambiguous]);
+    void localStore.write(userId, draftKey, { name, description, price, quantity, categoryId, tagIds, operationId: operationId.current, ambiguous } satisfies LocalDraft);
+  }, [storageReady, recovered, userId, draftKey, name, description, price, quantity, categoryId, tagIds, ambiguous]);
   // Explicit cancellation discards the local draft; closing the tab keeps it.
   function dismiss() { void localStore.remove(draftKey); onClose(); }
   function restore() {
     if (!recovered) return;
-    setName(recovered.name); setDescription(recovered.description); setPrice(recovered.price);
+    setName(recovered.name); setDescription(recovered.description); setPrice(recovered.price); setQuantity(recovered.quantity ?? '');
     setCategoryId(recovered.categoryId); setTagIds(recovered.tagIds);
     operationId.current = recovered.operationId; setAmbiguous(recovered.ambiguous); setRecovered(null);
   }
@@ -68,36 +80,36 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
 
   // Open once per form instance; restore body scrolling on every unmount.
   useEffect(() => {
-    if (pending) return;
     const element = dialog.current;
     element?.showModal();
     const unlock = lockDialogScroll();
     return () => { element?.close(); unlock(); };
-  }, [pending]);
+  }, []);
 
   // Keep all user input intact if validation or the network request fails.
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current || !canEdit) return;
-    const input = { name, description, price, category_id: categoryId, tag_ids: tagIds };
+    if (submitting.current || !canEdit || tagBusy.current || tagAmbiguous) return;
+    const input = { name, description, price, quantity, category_id: categoryId, tag_ids: tagIds };
     const validation = validateProduct(input);
     setError('');
     if (!validation.ok) { setFields(validation.fields); return; }
     setFields({});
     const now = new Date().toISOString();
-    const optimistic: TaggedProduct = { ...(product ?? { id: temporaryId, workspace_id: workspaceId, created_by: userId, currency: 'UAH' as const, status: 'active' as const, created_at: now, updated_at: now }), ...validation.value, tags: tags.filter((tag) => tagIds.includes(tag.id)) };
+    const optimistic: TaggedProduct = { ...(product ?? { id: temporaryId, workspace_id: workspaceId, created_by: userId, currency: 'UAH' as const, status: 'active' as const, created_at: now, updated_at: now }), ...validation.value, tags: availableTags.filter((tag) => tagIds.includes(tag.id)) };
     if (!listCache.begin(operationId.current, { scope, id: product?.id ?? temporaryId, product: optimistic })) return;
     submitting.current = true;
     setPending(true);
     // Persist the retry identity before sending: a lost response must reuse the same payload.
-    await localStore.write(userId, draftKey, { name, description, price, categoryId, tagIds, operationId: operationId.current, ambiguous: true } satisfies LocalDraft);
+    await localStore.write(userId, draftKey, { name, description, price, quantity, categoryId, tagIds, operationId: operationId.current, ambiguous: true } satisfies LocalDraft);
     let saved = false;
     try {
       const result = await saveProduct(workspaceId, product?.id ?? null, input, operationId.current);
+      if (listCache.owner !== userId || !listCache.overlays.has(operationId.current)) return;
       if (discardDeniedAccess(result)) return;
       listCache.finish(operationId.current, result.ok ? result.data : undefined);
       if (!result.ok) { setError(result.error); setFields(result.fields ?? {}); setAmbiguous(!!result.ambiguous); if (!result.ambiguous) operationId.current = crypto.randomUUID(); }
-      else { saved = true; if (!product) window.dispatchEvent(new CustomEvent('shopik-product-created', { detail: { category: categoryId } })); }
+      else { saved = true; if (!product) await localStore.write(userId, lastCategoryKey(userId, workspaceId), categoryId); }
     } catch {
       listCache.finish(operationId.current); setAmbiguous(true);
       setError('Результат невідомий. Повторіть збереження з тими самими даними.');
@@ -108,17 +120,37 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
     if (saved) { await localStore.remove(draftKey); onSaved(); }
   }
 
+  // Persist tags independently and retain retry identity without clearing product input.
+  async function saveInlineTag() {
+    if (tagBusy.current) return;
+    tagBusy.current = true; setTagPending(true); setTagError('');
+    try {
+      const result = await createTag(workspaceId, tagName, tagColor, tagOperation.current);
+      if (listCache.owner !== userId || !listCache.drafts.has(temporaryId)) return;
+      if (discardDeniedAccess(result)) return;
+      if (!result.ok) { setTagError(result.error); setTagAmbiguous(!!result.ambiguous); if (!result.ambiguous) tagOperation.current = crypto.randomUUID(); }
+      else if (result.data.tag) {
+        const tag = result.data.tag;
+        setAvailableTags(previous => [...previous.filter(item => item.id !== tag.id), tag]);
+        setTagIds(previous => [...new Set([...previous, tag.id])]);
+        window.dispatchEvent(new CustomEvent('shopik-catalog-changed', { detail: { scope, change: result.data } }));
+        tagOperation.current = crypto.randomUUID(); setTagAmbiguous(false); setAddingTag(false); setTagName('');
+      }
+    } catch { setTagAmbiguous(true); setTagError('Немає відповіді. Повторіть із тими самими даними.'); }
+    finally { tagBusy.current = false; setTagPending(false); }
+  }
+  const preview = validateProduct({ name: name || 'Товар', description, price, quantity, category_id: categoryId });
   return (
     <dialog ref={dialog} aria-labelledby="product-dialog-title"
-      onCancel={(event) => { event.preventDefault(); if (!pending && !ambiguous) dismiss(); }}
+      onCancel={(event) => { event.preventDefault(); if (!pending && !ambiguous && !tagPending && !tagAmbiguous) dismiss(); }}
       className="product-dialog fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto bg-surface p-5 text-foreground">
       {/* Product form shared by create and edit; labels have matching field IDs. */}
       <h2 id="product-dialog-title" className="text-xl font-semibold">{product ? 'Редагувати продукт' : 'Новий продукт'}</h2>
-      {!canEdit && <p role="alert" className="text-danger">Редагування доступне лише автору продукту.</p>}
+      {!canEdit && <p role="alert" className="text-danger">Завершену покупку можна змінити у витратах.</p>}
       {/* Recovery is a local draft, not a queued or confirmed server change. */}
       {recovered && <aside className="my-3 space-y-2" role="status"><p>На цьому пристрої є чернетка цього продукту.</p><button type="button" onClick={restore}>Відновити чернетку</button><button type="button" onClick={() => { void localStore.remove(draftKey); setRecovered(null); }}>Відкинути чернетку</button></aside>}
       <form onSubmit={submit} noValidate className="mt-5 space-y-4" aria-busy={pending}>
-        <fieldset disabled={pending || ambiguous || !!recovered || !storageReady || !canEdit} className="space-y-4 disabled:opacity-60">
+        <fieldset disabled={pending || tagPending || tagAmbiguous || ambiguous || !!recovered || !storageReady || !canEdit} className="space-y-4 disabled:opacity-60">
           {/* Mandatory category is also checked by the Workspace-scoped foreign key. */}
           <div>
             <label htmlFor="product-category" className="block font-medium">Категорія</label>
@@ -139,23 +171,41 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
             {fields.description && <p id="description-error" className="mt-1 text-sm text-danger">{fields.description}</p>}
           </div>
           <div>
-            <label htmlFor="product-price" className="block font-medium">Ціна, грн</label>
+            <label htmlFor="product-price" className="block font-medium">Ціна за штуку, грн</label>
             <input id="product-price" name="price" type="text" inputMode="decimal" placeholder="0" required value={price} onChange={(event) => setPrice(event.target.value)} aria-invalid={!!fields.price} aria-describedby={fields.price ? 'price-error' : undefined} className="mt-1 w-full rounded border border-line px-3 py-2" />
             {fields.price && <p id="price-error" className="mt-1 text-sm text-danger">{fields.price}</p>}
           </div>
+          {/* Integer quantity determines the planned total in every representation. */}
+          <div><label htmlFor="product-quantity" className="block font-medium">Кількість, шт.</label>
+            <input id="product-quantity" inputMode="numeric" placeholder="1" value={quantity} onChange={event => setQuantity(event.target.value)} aria-invalid={!!fields.quantity} aria-describedby={fields.quantity ? 'quantity-error' : undefined} className="mt-1 w-full rounded border px-3 py-2" />
+            {fields.quantity && <p id="quantity-error" className="text-danger">{fields.quantity}</p>}
+            <p className="mt-2" aria-live="polite">Сума: {preview.ok ? formatMoney(productTotal(preview.value)) : '—'}</p>
+          </div>
           {/* Filter-style pills move between selected and available groups. */}
           <fieldset className="tag-picker"><legend className="mb-2 font-medium">Теги</legend>
-            <div className="selected-tags flex flex-wrap gap-2" aria-label="Вибрані теги">{tags.filter((tag) => tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="true" aria-label={`Прибрати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}{!tagIds.length && <span className="text-sm text-muted">Виберіть теги нижче</span>}</div>
-            <div className="mt-2 flex flex-wrap gap-2" aria-label="Доступні теги">{tags.filter((tag) => !tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="false" aria-label={`Додати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}</div>
-            {!tags.length && <p className="text-sm text-muted">Створіть теги у налаштуваннях.</p>}
+            <div className="selected-tags flex flex-wrap gap-2" aria-label="Вибрані теги">{availableTags.filter((tag) => tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="true" aria-label={`Прибрати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}{!tagIds.length && <span className="text-sm text-muted">Виберіть теги нижче</span>}</div>
+            <div className="mt-2 flex flex-wrap gap-2" aria-label="Доступні теги">{availableTags.filter((tag) => !tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="false" aria-label={`Додати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}</div>
+            {!availableTags.length && <p className="text-sm text-muted">Додайте перший тег нижче.</p>}
+            <button type="button" onClick={() => setAddingTag(true)} className="text-link">+ Додати тег</button>
             {fields.tag_ids && <p role="alert" className="text-sm text-danger">{fields.tag_ids}</p>}
           </fieldset>
         </fieldset>
+        {/* Inline controls are siblings of the product fieldset; retries remain available. */}
+        {addingTag && <section className="inline-tag space-y-2" aria-label="Новий тег">
+          <fieldset disabled={tagPending || tagAmbiguous || pending}>
+            <label htmlFor="inline-tag-name">Назва тегу</label><input id="inline-tag-name" maxLength={120} value={tagName} onChange={event => setTagName(event.target.value)} className="w-full border p-2" />
+            <label htmlFor="inline-tag-color">Колір тегу</label><input id="inline-tag-color" type="color" value={tagColor} onChange={event => setTagColor(event.target.value.toUpperCase())} />
+            <TagBadge tag={{ name: tagName.trim() || 'Назва тегу', color: tagColor }} />
+          </fieldset>
+          {tagError && <p role="alert" className="text-danger">{tagError}</p>}
+          <button type="button" disabled={tagPending || pending} onClick={() => void saveInlineTag()} className="button-primary px-3 py-2">{tagPending ? 'Збереження…' : tagAmbiguous ? 'Повторити створення тегу' : 'Створити тег'}</button>
+          <button type="button" disabled={tagPending || tagAmbiguous} onClick={() => setAddingTag(false)} className="px-3 py-2">Скасувати тег</button>
+        </section>}
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
         {/* Disable dismissal while a request is in flight to avoid ambiguous saves. */}
         <div className="flex flex-wrap justify-end gap-3">
-          <button type="button" disabled={pending || ambiguous || !!recovered || !storageReady || !canEdit} onClick={dismiss} className="rounded border border-line px-4 py-2 disabled:opacity-50">Скасувати</button>
-          <button type="submit" disabled={pending || !!recovered || !storageReady || !canEdit} className="rounded button-primary px-4 py-2 disabled:opacity-50">{pending ? 'Збереження…' : 'Зберегти'}</button>
+          <button type="button" disabled={pending || tagPending || tagAmbiguous || ambiguous || !!recovered || !storageReady || !canEdit} onClick={dismiss} className="rounded border border-line px-4 py-2 disabled:opacity-50">Скасувати</button>
+          <button type="submit" disabled={pending || tagPending || tagAmbiguous || !!recovered || !storageReady || !canEdit} className="rounded button-primary px-4 py-2 disabled:opacity-50">{pending ? 'Збереження…' : 'Зберегти'}</button>
         </div>
         {ambiguous && <p role="status">Поля збережено для безпечного повтору. Натисніть «Зберегти», щоб перевірити результат.</p>}
       </form>

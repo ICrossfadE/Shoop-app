@@ -42,7 +42,6 @@ export function useList(userId: string, workspaceId: string, filter: ListFilter,
     let active = true;
     const read = () => readList(workspaceId, filter);
     const load = (force = false) => {
-      if (filter.kind === 'products' && !filter.category) return;
       void listCache.load(scope, filter, read, force).catch(() => { if (active) router.replace('/login'); });
     };
     load();

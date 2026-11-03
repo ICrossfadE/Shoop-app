@@ -1,4 +1,5 @@
 "use client";
+import { formatMoney, savings } from '@/lib/money';
 import { canDeleteExpense } from '@/lib/permissions';
 
 import { mutateProduct } from "@/lib/mutate-product";
@@ -155,6 +156,10 @@ export default function ExpenseList({
                   filtered={!!selectedTags?.length}
                   month={month}
                 />
+                <section className="savings-summary" aria-label="Економія за вибраний період">
+                  <h2>{!savings(data.items).compared ? 'Немає даних для порівняння' : `${savings(data.items).amount < 0 ? 'Перевитрата' : 'Економія'}: ${formatMoney(Math.abs(savings(data.items).amount))}`}</h2>
+                  <p className="text-sm text-muted">Порівняно {savings(data.items).compared} із {data.items.length} покупок</p>
+                </section>
                 {/* Current product tags are shown alongside immutable completion snapshots. */}
                 <section aria-labelledby="expense-history">
                   <h2
@@ -168,6 +173,7 @@ export default function ExpenseList({
                       <OrderCard expense canManage={canDeleteExpense(userId, expense)} pending={query.pending.some(operation => operation.id === expense.product_id)}
                         product={{ id: expense.product_id, workspace_id: expense.workspace_id, created_by: expense.created_by ?? '', category_id: expense.category_id, name: expense.name, description: '', price: expense.amount, currency: expense.currency, status: 'completed', created_at: expense.occurred_at, updated_at: expense.occurred_at, tags: expense.tags ?? [] }}
                         author={expense.author ?? authors.get(expense.product_id)} onEdit={trigger => setEditing({ expense, trigger })} onStatus={() => {}} onDelete={() => remove(expense.product_id, expense.name)} />
+                      <p className="expense-plan text-sm text-muted">{expense.planned_amount == null ? 'Немає даних для порівняння' : 'План: ' + formatMoney(expense.planned_amount) + ' · Факт: ' + formatMoney(expense.amount) + ' · ' + (expense.planned_amount >= expense.amount ? 'Економія: ' : 'Перевитрата: ') + formatMoney(Math.abs(savings([expense]).amount))}</p>
                       {expense.archived && <span className="sr-only">Архівна покупка</span>}
                     </li>)}
                   </ul>

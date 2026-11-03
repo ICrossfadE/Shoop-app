@@ -60,11 +60,10 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
     if (connection?.saveData || !navigator.onLine || boot.categoriesError || boot.tagsError) return;
     const timer = window.setTimeout(() => {
       const filters: ListFilter[] = [
-        { kind: 'products', category: boot.categories[0]?.id ?? '', month: '', tags: [] },
+        { kind: 'products', category: '', month: '', tags: [] },
         { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] },
       ];
       for (const filter of filters) {
-        if (filter.kind === 'products' && !filter.category) continue;
         void listCache.load(scope, filter, () => readList(boot.workspace.workspace_id, filter)).catch(() => {
           if (listCache.owner === '' || listCache.owner === boot.userId) window.location.replace('/login');
         });
@@ -73,20 +72,29 @@ export default function WorkspaceApp({ boot }: { boot: WorkspaceBoot }) {
     return () => window.clearTimeout(timer);
   }, [boot, scope]);
 
-  function changed(change: MutationData) {
+  const changed = useCallback((change: MutationData) => {
     listCache.invalidateLocal(scope);
     freshness.current.generation++; freshness.current.at = 0;
     if (change.workspaceChanged) { listCache.invalidate(scope); void refresh(true); }
     setMetadata((previous) => ({ ...previous,
       categories: change.category ? [...previous.categories.filter((item) => item.id !== change.category!.id), change.category].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)) : change.deleted ? previous.categories.filter((item) => item.id !== change.deleted) : previous.categories,
-      tags: change.tag ? [...previous.tags.filter((item) => item.id !== change.tag!.id), change.tag].sort((a, b) => a.name.localeCompare(b.name)) : previous.tags,
+      tags: change.tag ? [...previous.tags.filter((item) => item.id !== change.tag!.id), change.tag].sort((a, b) => a.name.localeCompare(b.name)) : change.deletedTag ? previous.tags.filter(item => item.id !== change.deletedTag) : previous.tags,
     }));
-  }
+    listCache.invalidate(scope);
+  }, [scope, refresh]);
+  useEffect(() => {
+    function update(event: Event) {
+      const detail = (event as CustomEvent<{ scope: string; change: MutationData }>).detail;
+      if (detail.scope === scope && listCache.owner === boot.userId) changed(detail.change);
+    }
+    window.addEventListener('shopik-catalog-changed', update);
+    return () => window.removeEventListener('shopik-catalog-changed', update);
+  }, [scope, boot.userId, changed]);
   return <div className="flex flex-1 flex-col bg-page text-foreground">
     <AppHeader account={boot.account} page={screen} workspace={metadata.workspace} />
     {error && <aside role="alert" className="app-main">{error} <button onClick={() => refresh(true)}>Спробувати знову</button></aside>}
     {screen === 'products' ? <ProductList membershipVersion={boot.membershipVersion} userId={boot.userId} workspaceId={boot.workspace.workspace_id} workspaceName={boot.workspace.workspace_name} role={boot.workspace.member_role} account={boot.account} email={boot.email}
-      categories={metadata.categories} tags={metadata.tags} hasInitial={!!boot.initial && boot.initialFilter.kind === 'products'} selectedCategory={boot.initialFilter.kind === 'products' ? boot.initialFilter.category : metadata.categories[0]?.id ?? ''}
+      categories={metadata.categories} tags={metadata.tags} hasInitial={!!boot.initial && boot.initialFilter.kind === 'products'} selectedCategory={boot.initialFilter.kind === 'products' ? boot.initialFilter.category : ''}
       selectedTags={boot.initialFilter.kind === 'products' ? boot.initialFilter.tags : []} products={boot.initial?.products ?? []} authors={boot.initial?.authors ?? []}
       loadError={metadata.categoriesError || metadata.tagsError ? 'Не вдалося завантажити довідники.' : null} />
       : screen === 'expenses' ? <ExpenseList membershipVersion={boot.membershipVersion} userId={boot.userId} workspace={boot.workspace} tags={metadata.tags} initialFilter={boot.initialFilter.kind === 'expenses' ? boot.initialFilter : { kind: 'expenses', category: '', month: currentKyivMonth(), tags: [] }}

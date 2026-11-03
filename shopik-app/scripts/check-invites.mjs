@@ -89,7 +89,7 @@ async function startMock() {
                     if (name === 'ensure_personal_workspace')
                         return (await t.query('select * from public.ensure_personal_workspace()')).rows;
                     const keys = Object.keys(body), args = keys.map((k, i) => k + '=> $' + (i + 1)).join(',');
-                    const q = await t.query(`select public.${name}(${args}) as data`, Object.values(body));
+                    const q = await t.query(`select public.${name}(${args}) as data`, Object.entries(body).map(([key,value])=>key==='p_items'?JSON.stringify(value):value));
                     // PostgREST serializes scalar numeric as a JSON number; pg/PGlite uses text.
                     return name === 'correct_expense_price' ? Number(q.rows[0].data) : q.rows[0].data;
                 }
@@ -184,6 +184,12 @@ async function mainInvites(){
    });return page;
   }
   const owner=await pageFor(session);
+  if(process.env.SHOPIK_CHECK_WORKFLOW){
+    const {checkWorkflow}=await import('../../docs/testing/019-shopping-workflow/check-workflow.mts');
+    try { await checkWorkflow({db,owner,wid,cid,homeId,uid,joinerId,pageFor,sessionFor,output,errors}); }
+    catch(error) { await owner.screenshot({path:path.join(output,'failure.png'),fullPage:true});fs.writeFileSync(path.join(output,'failure.txt'),await owner.locator('body').innerText());throw error; }
+    return;
+  }
   if(process.env.SHOPIK_CHECK_MOBILE){
     const {checkMobile}=await import('../../docs/testing/017-mobile-ux/check-mobile.mts');
     await checkMobile({db,owner,wid,cid,homeId,uid,joinerId,pageFor,sessionFor,output,errors});
