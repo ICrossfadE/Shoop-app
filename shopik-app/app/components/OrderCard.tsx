@@ -140,6 +140,21 @@ export default function OrderCard({
       {/* Show the optional description in every product card without reserving an empty row. */}
       <div className="compact-details">
         <h3 className="font-semibold">{product.name}</h3>
+        {/* Compact tag colors save space; names remain available to assistive technology. */}
+        {product.tags.length > 0 && (
+          <ul className="product-tag-marks" aria-label="Теги продукту">
+            {product.tags.map((tag) => (
+              <li
+                key={tag.id}
+                className="product-tag-mark"
+                style={{ backgroundColor: tag.color }}
+                title={tag.name}
+              >
+                <span className="sr-only">{tag.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         {product.description.trim() && (
           <p className="product-description text-muted">
             {product.description}
