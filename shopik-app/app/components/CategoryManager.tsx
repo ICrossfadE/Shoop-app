@@ -156,7 +156,7 @@ export default function CategoryManager({
         <div className="flex flex-wrap gap-2">
           <button
             disabled={busy.includes(editing ?? "new")}
-            className="rounded button-primary px-3 py-2 disabled:opacity-50"
+            className="rounded button-primary px-3 py-2 disabled:opacity-50 w-full sm:w-auto"
           >
             {pending
               ? "Збереження…"
@@ -188,42 +188,48 @@ export default function CategoryManager({
         {pending ? "Зберігається…" : notice}
       </p>
       {/* Workspace category actions. */}
-      {!createOnly && <ul className="space-y-3">
-        {visible.map((category) => (
-          <li
-            key={category.id}
-            className="flex flex-wrap items-center gap-2 border-t pt-3"
-          >
-            <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
-              {category.name}
-            </span>
-            {category.created_by === userId && <button
-              disabled={
-                busy.includes(category.id) ||
-                ambiguous ||
-                busy.includes(editing ?? "new")
-              }
-              onClick={() => {
-                formKey.current = crypto.randomUUID();
-                setEditing(category.id);
-                setName(category.name);
-                setError("");
-                setNotice("");
-              }}
-              className="rounded border px-2 py-1"
+      {!createOnly && (
+        <ul className="space-y-3">
+          {visible.map((category) => (
+            <li
+              key={category.id}
+              className="flex flex-wrap items-center gap-2 border-t pt-3"
             >
-              Редагувати
-            </button>}
-            {category.created_by === userId && <button
-              disabled={busy.includes(category.id)}
-              onClick={() => remove(category)}
-              className="rounded border border-danger px-2 py-1 text-danger"
-            >
-              Видалити
-            </button>}
-          </li>
-        ))}
-      </ul>}
+              <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+                {category.name}
+              </span>
+              {category.created_by === userId && (
+                <button
+                  disabled={
+                    busy.includes(category.id) ||
+                    ambiguous ||
+                    busy.includes(editing ?? "new")
+                  }
+                  onClick={() => {
+                    formKey.current = crypto.randomUUID();
+                    setEditing(category.id);
+                    setName(category.name);
+                    setError("");
+                    setNotice("");
+                  }}
+                  className="rounded border px-2 py-1"
+                >
+                  Редагувати
+                </button>
+              )}
+              {category.created_by === userId && (
+                <button
+                  disabled={busy.includes(category.id)}
+                  onClick={() => remove(category)}
+                  className="rounded border border-danger px-2 py-1 text-danger"
+                >
+                  Видалити
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

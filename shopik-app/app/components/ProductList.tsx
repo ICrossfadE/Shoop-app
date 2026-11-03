@@ -1,4 +1,5 @@
 "use client";
+import { IconChevronDown } from "@tabler/icons-react";
 import { useId, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useList, listCache, navigateList } from "@/lib/use-list";
@@ -61,7 +62,7 @@ function CategorySection({
           aria-controls={panelId}
           onClick={() => setOpen(!open)}
         >
-          <span aria-hidden="true">{open ? "⌃" : "⌄"}</span>
+          <IconChevronDown size={20} className="accordion-chevron" aria-hidden="true" />
           <span className="category-name">{category.name}</span>
           <span className="category-sum">
             {ready ? <AnimatedNumber value={total} /> : "…"}

@@ -1,4 +1,5 @@
 "use client";
+import { IconChevronDown } from "@tabler/icons-react";
 import { useSearchParams } from "next/navigation";
 import { navigateList } from "@/lib/use-list";
 import TagBadge from "./TagBadge";
@@ -32,13 +33,20 @@ export default function TagFilter({
   return (
     <details className="filter-accordion compact-filter">
       {/* Active selections remain visible when the filter controls are collapsed. */}
-      <summary>
-        Фільтри · тегів: {selected.length}
-        {categoryCount !== undefined
-          ? " · категорій для суми: " + categoryCount
-          : ""}
+      <summary className="icon-summary">
+        <IconChevronDown
+          size={20}
+          className="accordion-chevron"
+          aria-hidden="true"
+        />
+        <span>
+          Фільтри · тегів: {selected.length}
+          {categoryCount !== undefined
+            ? " · категорій для суми: " + categoryCount
+            : ""}
+        </span>
       </summary>
-      <div className="filter-panel">
+      <div className="filter-panel" style={{ borderRadius: "12px" }}>
         <div className="filter-caption">
           <span>Теги · будь-який вибраний</span>
           <button type="button" onClick={() => apply([])} className="text-link">
@@ -68,7 +76,7 @@ export default function TagFilter({
                 );
               }}
             >
-              <TagBadge tag={tag} />
+              <TagBadge tag={tag} selected={selected.includes(tag.id)} />
             </button>
           ))}
           {!tags.length && <span className="text-muted">Тегів ще немає</span>}

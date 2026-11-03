@@ -486,7 +486,7 @@ button[aria-pressed="true"]:hover:not(:has(.tag-badge)) {
 /* Pills have the same shape in filters, the editor and historical purchases. */
 .tag-badge {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 5px;
   max-width: 100%;
   border-radius: 999px;
@@ -494,9 +494,6 @@ button[aria-pressed="true"]:hover:not(:has(.tag-badge)) {
   font-size: 12px;
   font-weight: 600;
   overflow-wrap: anywhere;
-}
-.tag-hash {
-  opacity: 0.75;
 }
 .tag-picker button,
 .filter-panel button[aria-pressed] {
@@ -672,8 +669,8 @@ button:has(.tag-badge) { filter: none; box-shadow: none; }
 button:has(.tag-badge):focus:not(:focus-visible) { outline: none; }
 button:has(.tag-badge):focus-visible { outline: 2px dashed var(--foreground); outline-offset: 2px; }
 button:has(.tag-badge)[aria-pressed="true"] { box-shadow: none; }
-button:has(.tag-badge)[aria-pressed="true"] .tag-hash { display: none; }
-button:has(.tag-badge)[aria-pressed="true"] .tag-badge::before { content: '✓'; }
+/* SVG icons keep a stable size when labels wrap or buttons shrink. */
+.tabler-icon { flex-shrink: 0; }
 
 /* Task 017: fluid spacing preserves readable text and 44px touch targets. */
 .mobile-main, .settings-grid { padding: clamp(16px, 3vw, 32px) clamp(12px, 3vw, 32px) calc(104px + env(safe-area-inset-bottom)); }
@@ -692,8 +689,16 @@ button:has(.tag-badge)[aria-pressed="true"] .tag-badge::before { content: '✓';
 .category-accordion { border: 1px solid var(--divider); background: var(--surface); border-radius: 16px; overflow: clip; min-width: 0; }
 .category-accordion summary { display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 54px; padding: 10px clamp(10px, 2vw, 18px); list-style: none; }
 .category-accordion summary::-webkit-details-marker { display: none; }
-.category-accordion summary::after { content: '⌄'; flex-shrink: 0; transition: rotate .15s; }
-.category-accordion[open] > summary::after { rotate: 180deg; }
+/* Both native details and controlled category buttons share the same chevron. */
+summary.icon-summary { display: flex; align-items: center; gap: 8px; list-style: none; }
+summary.icon-summary::-webkit-details-marker { display: none; }
+summary.icon-summary > span { min-width: 0; }
+.accordion-chevron { transition: rotate .15s; }
+details[open] > summary > .accordion-chevron,
+.category-toggle[aria-expanded="true"] > .accordion-chevron { rotate: 180deg; }
+@media (prefers-reduced-motion: reduce) {
+  .accordion-chevron { transition: none; }
+}
 .category-name { min-width: 0; flex: 1; font-weight: 600; overflow-wrap: anywhere; }
 .category-sum { max-width: 48%; font-size: .875rem; text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .category-panel { border-top: 1px solid var(--divider); padding: 6px; }

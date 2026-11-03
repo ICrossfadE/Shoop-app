@@ -183,7 +183,7 @@ export default function OrderModal({ scope, temporaryId, userId, workspaceId, pr
           </div>
           {/* Filter-style pills move between selected and available groups. */}
           <fieldset className="tag-picker"><legend className="mb-2 font-medium">Теги</legend>
-            <div className="selected-tags flex flex-wrap gap-2" aria-label="Вибрані теги">{availableTags.filter((tag) => tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="true" aria-label={`Прибрати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}{!tagIds.length && <span className="text-sm text-muted">Виберіть теги нижче</span>}</div>
+            <div className="selected-tags flex flex-wrap gap-2" aria-label="Вибрані теги">{availableTags.filter((tag) => tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="true" aria-label={`Прибрати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} selected /></button>)}{!tagIds.length && <span className="text-sm text-muted">Виберіть теги нижче</span>}</div>
             <div className="mt-2 flex flex-wrap gap-2" aria-label="Доступні теги">{availableTags.filter((tag) => !tagIds.includes(tag.id)).map((tag) => <button type="button" key={tag.id} data-tag-id={tag.id} aria-pressed="false" aria-label={`Додати тег ${tag.name}`} onClick={() => toggleTag(tag.id)}><TagBadge tag={tag} /></button>)}</div>
             {!availableTags.length && <p className="text-sm text-muted">Додайте перший тег нижче.</p>}
             <button type="button" onClick={() => setAddingTag(true)} className="text-link">+ Додати тег</button>

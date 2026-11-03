@@ -1,17 +1,24 @@
-'use client';
+"use client";
 
-import { useActionState } from 'react';
-import { listCache } from '@/lib/use-list';
-import { signOut } from '@/app/auth/actions';
+import { useActionState } from "react";
+import { listCache } from "@/lib/use-list";
+import { signOut } from "@/app/auth/actions";
 
 export default function SignOutButton() {
   const [state, action, pending] = useActionState(signOut, null);
   return (
     <form action={action} onSubmit={() => listCache.clear()}>
-      <button disabled={pending} className="rounded button-danger px-4 py-2 disabled:opacity-60">
-        {pending ? 'Вихід…' : 'Вийти'}
+      <button
+        disabled={pending}
+        className="rounded button-danger px-4 py-2 disabled:opacity-60 w-full"
+      >
+        {pending ? "Вихід…" : "Вийти"}
       </button>
-      {state?.error && <p role="alert" className="mt-2 text-sm text-danger">{state.error}</p>}
+      {state?.error && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {state.error}
+        </p>
+      )}
     </form>
   );
 }

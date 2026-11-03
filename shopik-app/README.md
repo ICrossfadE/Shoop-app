@@ -4,6 +4,8 @@ Shopik setup (Supabase environment variables, Google OAuth, SQL migration and ve
 Run checks with `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
 If Turbopack fails to launch its PostCSS worker on Windows, use `npm run build -- --webpack`.
 
+UI icons use the official [`@tabler/icons-react`](https://docs.tabler.io/icons/libraries/react) package. Import individual icons, use `currentColor` to follow the theme, and mark decorative icons with `aria-hidden="true"`; icon-only buttons must keep an accessible label. Accordion chevrons share the `.accordion-chevron` styles, and `TagBadge` accepts `selected` to show a selection check.
+
 ## Getting Started
 
 First, run the development server:

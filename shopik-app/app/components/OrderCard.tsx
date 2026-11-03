@@ -1,4 +1,5 @@
 "use client";
+import { IconCheck, IconDotsVertical } from "@tabler/icons-react";
 import { productTotal, formatMoney } from "@/lib/money";
 import AnimatedNumber from "./AnimatedNumber";
 
@@ -169,7 +170,7 @@ export default function OrderCard({
               aria-label={`Завершити ${product.name}`}
               className="icon-action"
             >
-              ✓
+              <IconCheck size={20} aria-hidden="true" />
             </button>
           )}
           {canManage && (
@@ -216,7 +217,7 @@ export default function OrderCard({
                 onClick={() => setOpen(!open)}
                 className="icon-action"
               >
-                ⋯
+                <IconDotsVertical size={20} aria-hidden="true" />
               </button>
               {open &&
                 createPortal(

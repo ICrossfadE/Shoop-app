@@ -1,4 +1,5 @@
 'use client';
+import { IconX } from '@tabler/icons-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { WorkspaceBoot } from '@/lib/workspace-boot';
 import type { MutationData } from '@/lib/list-model';
@@ -63,7 +64,7 @@ export default function CreateAction({ boot, onChange }: { boot: WorkspaceBoot; 
     </div>
     <button hidden={!!form || drafting} ref={button} popoverTarget="create-menu" className="create-fab" aria-label="Створити" onClick={() => { requestAnimationFrame(() => menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()); }}>+</button>
     {form && <dialog ref={dialog} className="product-dialog create-dialog" aria-labelledby="create-title" onCancel={event => { event.preventDefault(); close(); }}>
-      <div className="list-heading"><h2 id="create-title">{form === 'tag' ? 'Створити тег' : 'Створити категорію'}</h2><button className="icon-action" aria-label="Закрити форму" onClick={close}>×</button></div>
+      <div className="list-heading"><h2 id="create-title">{form === 'tag' ? 'Створити тег' : 'Створити категорію'}</h2><button className="icon-action" aria-label="Закрити форму" onClick={close}><IconX size={20} aria-hidden="true" /></button></div>
       {form === 'tag' ? <TagManager createOnly workspaceId={boot.workspace.workspace_id} tags={boot.tags} onChange={onChange} /> : <CategoryManager createOnly workspaceId={boot.workspace.workspace_id} userId={boot.userId} categories={boot.categories} onChange={onChange} />}
     </dialog>}
   </>;
