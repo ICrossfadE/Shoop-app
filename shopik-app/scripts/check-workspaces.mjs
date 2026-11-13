@@ -66,6 +66,7 @@ export async function checkWorkspaces({db,owner,member,wid,joinerId,uid,output,p
  await owner.getByRole('button',{name:'Запросити за посиланням',exact:true}).click();
  const field=owner.getByLabel('Нове посилання запрошення');await field.waitFor();const link=await field.inputValue();
  const guest=await pageFor(null);await guest.goto(origin+'/login');
+ await guest.getByRole('button',{name:'Спільний простір',exact:true}).click();
  await guest.getByLabel('Посилання запрошення',{exact:true}).fill('https://evil.invalid/invite#token='+'A'.repeat(43));
  await guest.getByRole('button',{name:'Приєднатися за запрошенням',exact:true}).click();
  await guest.getByRole('alert').filter({hasText:'з цього сайту'}).waitFor();

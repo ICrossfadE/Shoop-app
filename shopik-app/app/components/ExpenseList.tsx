@@ -1,6 +1,7 @@
 "use client";
-import { formatMoney, savings } from '@/lib/money';
-import { canDeleteExpense } from '@/lib/permissions';
+import { expenseTone, savings } from "@/lib/money";
+import ExpenseComparison from "./ExpenseComparison";
+import { canDeleteExpense } from "@/lib/permissions";
 
 import { mutateProduct } from "@/lib/mutate-product";
 import { useSearchParams } from "next/navigation";
@@ -10,12 +11,11 @@ import { useList, navigateList } from "@/lib/use-list";
 import type { ListData, ListFilter } from "@/lib/list-model";
 import type { Tag } from "@/lib/tags";
 import ExpenseChart from "./ExpenseChart";
-import { useState } from 'react';
-import type { Expense } from '@/lib/expenses';
-import OrderCard from './OrderCard';
-import ExpensePriceDialog from './ExpensePriceDialog';
+import { useState } from "react";
+import type { Expense } from "@/lib/expenses";
+import OrderCard from "./OrderCard";
+import ExpensePriceDialog from "./ExpensePriceDialog";
 import TagFilter from "./TagFilter";
-
 
 // Month, rows and totals switch as one keyed snapshot, never mixing filters.
 export default function ExpenseList({
@@ -36,7 +36,10 @@ export default function ExpenseList({
   loadError: boolean;
 }) {
   const params = useSearchParams();
-  const [editing, setEditing] = useState<{ expense: Expense; trigger: HTMLElement } | null>(null);
+  const [editing, setEditing] = useState<{
+    expense: Expense;
+    trigger: HTMLElement;
+  } | null>(null);
   const month = isExpenseMonth(params.get("month"))
     ? params.get("month")!
     : currentKyivMonth();
@@ -53,6 +56,20 @@ export default function ExpenseList({
     membershipVersion,
   );
   const data = invalidTags ? null : query.data?.expenses;
+  // Only known plans participate in comparison; the chart still totals all expenses.
+  const comparison = savings(data?.items ?? []);
+  const comparedItems =
+    data?.items.filter((item) => item.planned_amount != null) ?? [];
+  const comparedPlan =
+    comparedItems.reduce(
+      (sum, item) => sum + Math.round(item.planned_amount! * 100),
+      0,
+    ) / 100;
+  const comparedActual =
+    comparedItems.reduce(
+      (sum, item) => sum + Math.round(item.amount * 100),
+      0,
+    ) / 100;
   const error = invalidTags || (!data && (loadError || !!query.error));
   function remove(id: string, name: string) {
     if (window.confirm("Видалити «" + name + "» разом із витратою?"))
@@ -156,9 +173,21 @@ export default function ExpenseList({
                   filtered={!!selectedTags?.length}
                   month={month}
                 />
-                <section className="savings-summary" aria-label="Економія за вибраний період">
-                  <h2>{!savings(data.items).compared ? 'Немає даних для порівняння' : `${savings(data.items).amount < 0 ? 'Перевитрата' : 'Економія'}: ${formatMoney(Math.abs(savings(data.items).amount))}`}</h2>
-                  <p className="text-sm text-muted">Порівняно {savings(data.items).compared} із {data.items.length} покупок</p>
+                <section
+                  className="savings-summary"
+                  aria-label="Економія за вибраний період"
+                >
+                  <h2 className="font-semibold">План і факт</h2>
+                  <p className="text-sm text-muted">
+                    Порівняно {comparison.compared} із {data.items.length}{" "}
+                    покупок · суми лише порівняних покупок
+                  </p>
+                  <ExpenseComparison
+                    item={{
+                      amount: comparedActual,
+                      planned_amount: comparison.compared ? comparedPlan : null,
+                    }}
+                  />
                 </section>
                 {/* Current product tags are shown alongside immutable completion snapshots. */}
                 <section aria-labelledby="expense-history">
@@ -169,13 +198,44 @@ export default function ExpenseList({
                     Покупки
                   </h2>
                   <ul className="product-rows">
-                    {data.items.map(expense => <li key={expense.id}>
-                      <OrderCard expense canManage={canDeleteExpense(userId, expense)} pending={query.pending.some(operation => operation.id === expense.product_id)}
-                        product={{ id: expense.product_id, workspace_id: expense.workspace_id, created_by: expense.created_by ?? '', category_id: expense.category_id, name: expense.name, description: '', price: expense.amount, currency: expense.currency, status: 'completed', created_at: expense.occurred_at, updated_at: expense.occurred_at, tags: expense.tags ?? [] }}
-                        author={expense.author ?? authors.get(expense.product_id)} onEdit={trigger => setEditing({ expense, trigger })} onStatus={() => {}} onDelete={() => remove(expense.product_id, expense.name)} />
-                      <p className="expense-plan text-sm text-muted">{expense.planned_amount == null ? 'Немає даних для порівняння' : 'План: ' + formatMoney(expense.planned_amount) + ' · Факт: ' + formatMoney(expense.amount) + ' · ' + (expense.planned_amount >= expense.amount ? 'Економія: ' : 'Перевитрата: ') + formatMoney(Math.abs(savings([expense]).amount))}</p>
-                      {expense.archived && <span className="sr-only">Архівна покупка</span>}
-                    </li>)}
+                    {data.items.map((expense) => (
+                      <li key={expense.id}>
+                        <OrderCard
+                          expense
+                          priceTone={expenseTone(expense)}
+                          canManage={canDeleteExpense(userId, expense)}
+                          pending={query.pending.some(
+                            (operation) => operation.id === expense.product_id,
+                          )}
+                          product={{
+                            id: expense.product_id,
+                            workspace_id: expense.workspace_id,
+                            created_by: expense.created_by ?? "",
+                            category_id: expense.category_id,
+                            name: expense.name,
+                            description: "",
+                            price: expense.amount,
+                            currency: expense.currency,
+                            status: "completed",
+                            created_at: expense.occurred_at,
+                            updated_at: expense.occurred_at,
+                            tags: expense.tags ?? [],
+                          }}
+                          author={
+                            expense.author ?? authors.get(expense.product_id)
+                          }
+                          onEdit={(trigger) => setEditing({ expense, trigger })}
+                          onStatus={() => {}}
+                          onDelete={() =>
+                            remove(expense.product_id, expense.name)
+                          }
+                        />
+                        <ExpenseComparison item={expense} compact />
+                        {expense.archived && (
+                          <span className="sr-only">Архівна покупка</span>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 </section>
               </>
@@ -183,7 +243,15 @@ export default function ExpenseList({
           </div>
         </div>
       </main>
-      {editing && <ExpensePriceDialog expense={editing.expense} trigger={editing.trigger} workspaceId={workspace.workspace_id} scope={query.scope} onClose={() => setEditing(null)} />}
+      {editing && (
+        <ExpensePriceDialog
+          expense={editing.expense}
+          trigger={editing.trigger}
+          workspaceId={workspace.workspace_id}
+          scope={query.scope}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }

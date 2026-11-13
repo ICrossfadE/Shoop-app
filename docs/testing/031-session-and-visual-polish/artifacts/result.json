@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "isolated": true,
+  "layouts": 60,
+  "settingsSections": [
+    "appearance",
+    "tags",
+    "categories",
+    "workspaces",
+    "members",
+    "account"
+  ],
+  "scenarios": [
+    "login keyboard/collapse/preserved input",
+    "temporary membership failure keeps session and data; recovery works",
+    "actual membership revocation returns 403",
+    "real price corrections and unchanged plan",
+    "known/unknown/equal comparison",
+    "large total outside ring",
+    "six themes/five widths/200% text",
+    "settings sections and soft borders",
+    "empty/zero state"
+  ]
+}

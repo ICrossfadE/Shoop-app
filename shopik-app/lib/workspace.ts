@@ -7,6 +7,7 @@ import { createClient } from './supabase/server';
 import { getSupabaseConfig } from './supabase/config';
 import { isWorkspaceId } from './products';
 import { accountFromClaims } from './identity';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 // Every protected page verifies identity and derives Workspace server-side.
 export const requireWorkspace = cache(async () => {
@@ -35,8 +36,12 @@ export async function workspaceClient(workspaceId: unknown) {
   if (!isWorkspaceId(workspaceId)) return null;
   const supabase = await createClient(true);
   const { data, error } = await supabase.auth.getClaims();
+  // A temporary Auth outage must not be reported as revoked access to the client.
+  if (isAuthRetryableFetchError(error)) throw error;
   if (error || !data?.claims.sub) return null;
   const { data: membership, error: memberError } = await supabase.from('workspace_members')
     .select('role').eq('workspace_id', workspaceId).eq('user_id', data.claims.sub).maybeSingle();
-  return !memberError && membership ? supabase : null;
+  // A failed membership query proves nothing about access; retain the session and retry.
+  if (memberError) throw memberError;
+  return membership ? supabase : null;
 }

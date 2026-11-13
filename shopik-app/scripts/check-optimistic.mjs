@@ -211,7 +211,7 @@ async function run(baseline) {
                 await page.getByRole('link', { name: label, exact: true }).click();
                 await page.getByRole('heading', { name: heading, exact: true }).waitFor();
                 navigation.push({ heading, ms: Math.round(performance.now() - started) });
-                if (heading === 'Витрати') await page.waitForFunction(() => document.querySelector('.donut-center strong')?.textContent.includes('50,00'));
+                if (heading === 'Витрати') await page.waitForFunction(() => document.querySelector('.expense-chart-total strong')?.textContent.includes('50,00'));
                 assert.equal(await header.evaluate(node => node.isConnected), true, 'Header must remain mounted');
             }
             stats = [];
@@ -282,7 +282,7 @@ async function run(baseline) {
             await page.getByRole('button', { name: 'Видалити', exact: true }).click();
             await page.getByRole('heading', { name: 'Measured edited', exact: true }).waitFor({ state: 'hidden' });
             await settled();
-            assert.match(await page.locator('.donut-center strong').textContent(), /0,00/);
+            assert.match(await page.locator('.expense-chart-total strong').textContent(), /0,00/);
             console.log('PASS expense optimistic total');
             await page.goto('http://127.0.0.1:3191/settings');
             await page.locator('#tag-name').fill('Browser tag');

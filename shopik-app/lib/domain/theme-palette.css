@@ -1,0 +1,105 @@
+/* Explicit account selection is the only theme source; system appearance cannot override it. */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f5f1;
+  --foreground: #2c2c2c;
+  --surface: #ffffff;
+  --soft: #eeefea;
+  --muted: #626a63;
+  --line: #888888;
+  --nav: #2c2c2c;
+  --link: #825000;
+  --danger: #b91c1c;
+  --danger-surface: #fef2f2;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #171717;
+  --foreground: #f0f2eb;
+  --surface: #444444;
+  --soft: #171717;
+  --muted: #b8b8b8;
+  --line: #f0f2eb;
+  --nav: #f0f2eb;
+  --link: #ffc667;
+  --danger: #fca5a5;
+  --danger-surface: #421f28;
+}
+
+/* pink: semantic tokens leave tag and historical chart colors intact. */
+:root[data-theme="pink"] {
+  color-scheme: light;
+  --background: #fff0f5;
+  --foreground: #391c2b;
+  --surface: #fff8fb;
+  --soft: #f9dce9;
+  --muted: #775363;
+  --line: #a36b84;
+  --link: #922957;
+  --accent: #ad245f;
+  --accent-end: #c03473;
+  --on-accent: #ffffff;
+  --divider: #ecc5d7;
+  --nav: var(--foreground);
+  --neutral: var(--accent);
+  --on-neutral: var(--on-accent);
+}
+
+/* light-blue: semantic tokens leave tag and historical chart colors intact. */
+:root[data-theme="light-blue"] {
+  color-scheme: light;
+  --background: #f5f7fa;
+  --foreground: #202f40;
+  --surface: #ffffff;
+  --soft: #e5eef8;
+  --muted: #53657a;
+  --line: #71849a;
+  --link: #185b9c;
+  --accent: #185b9c;
+  --accent-end: #226bae;
+  --on-accent: #ffffff;
+  --divider: #d7e2ee;
+  --nav: var(--foreground);
+  --neutral: var(--accent);
+  --on-neutral: var(--on-accent);
+}
+
+/* light-green: semantic tokens leave tag and historical chart colors intact. */
+:root[data-theme="light-green"] {
+  color-scheme: light;
+  --background: #f5f7f5;
+  --foreground: #20352a;
+  --surface: #ffffff;
+  --soft: #e4efe7;
+  --muted: #536b5b;
+  --line: #718a79;
+  --link: #22633d;
+  --accent: #22633d;
+  --accent-end: #2e754a;
+  --on-accent: #ffffff;
+  --divider: #d5e4d9;
+  --nav: var(--foreground);
+  --neutral: var(--accent);
+  --on-neutral: var(--on-accent);
+}
+
+/* light-pink: semantic tokens leave tag and historical chart colors intact. */
+:root[data-theme="light-pink"] {
+  color-scheme: light;
+  --background: #f8f6f7;
+  --foreground: #382632;
+  --surface: #ffffff;
+  --soft: #f6e7ef;
+  --muted: #715b67;
+  --line: #987689;
+  --link: #963060;
+  --accent: #963060;
+  --accent-end: #ad3b72;
+  --on-accent: #ffffff;
+  --divider: #eadce3;
+  --nav: var(--foreground);
+  --neutral: var(--accent);
+  --on-neutral: var(--on-accent);
+}

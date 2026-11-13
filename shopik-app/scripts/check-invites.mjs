@@ -30,7 +30,7 @@ const jwt = unsigned + '.' + crypto.sign('sha256', Buffer.from(unsigned), keypai
 const user = { id: uid, aud: 'authenticated', role: 'authenticated', email: claims.email, user_metadata: claims.user_metadata, app_metadata: { provider: 'google' } };
 const session = { access_token: jwt, refresh_token: 'fixture-only', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user };
 let oauthSession=session;
-let db, stats = [], wid, cid, homeId, failKind = '', loseKind = '', delay = 60, server, failPeople=false;
+let db, stats = [], wid, cid, homeId, failKind = '', loseKind = '', delay = 60, server, failPeople=false, failMembership=false;
 async function database(baseline) {
     if (db)
         await db.close();
@@ -94,6 +94,7 @@ async function startMock() {
                     return name === 'correct_expense_price' ? Number(q.rows[0].data) : q.rows[0].data;
                 }
                 const table = url.pathname.split('/').pop();
+                if (table === 'workspace_members' && failMembership) throw Error('Fixture membership temporarily unavailable');
                 if (!['products', 'categories', 'tags', 'profiles', 'workspace_members','workspaces'].includes(table))
                     throw Error('bad table ' + table);
                 const values = [], conditions = [];
@@ -184,6 +185,12 @@ async function mainInvites(){
    });return page;
   }
   const owner=await pageFor(session);
+  if(process.env.SHOPIK_CHECK_POLISH){
+    const {checkPolish}=await import('../../docs/testing/031-session-and-visual-polish/check-polish.mts');
+    try { await checkPolish({db,owner,wid,cid,uid,pageFor,output,errors,setMembershipFailure:value=>{failMembership=value;}}); }
+    catch(error) { await owner.screenshot({path:path.join(output,'failure.png'),fullPage:true});throw error; }
+    return;
+  }
   if(process.env.SHOPIK_CHECK_WORKFLOW){
     const {checkWorkflow}=await import('../../docs/testing/019-shopping-workflow/check-workflow.mts');
     try { await checkWorkflow({db,owner,wid,cid,homeId,uid,joinerId,pageFor,sessionFor,output,errors}); }

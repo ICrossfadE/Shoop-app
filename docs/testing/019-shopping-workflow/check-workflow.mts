@@ -12,7 +12,7 @@ type Locator = {
   evaluate<T>(callback: (element: HTMLElement) => T): Promise<T>;
 };
 type Route = { request(): { method(): string }; fetch(): Promise<unknown>; abort(): Promise<void>; continue(): Promise<void> };
-type Page = Omit<Locator, 'evaluate'> & {
+export type Page = Omit<Locator, 'evaluate'> & {
   goto(url: string): Promise<unknown>; reload(): Promise<unknown>;
   setViewportSize(size: { width: number; height: number }): Promise<void>;
   screenshot(options: object): Promise<unknown>; keyboard: { press(key: string): Promise<void> };
@@ -22,7 +22,7 @@ type Page = Omit<Locator, 'evaluate'> & {
   once(event: string, handler: (dialog: { accept(): Promise<void> }) => void): void;
   context(): { addCookies(cookies: object[]): Promise<void> };
 };
-type Database = { query(sql: string, values?: unknown[]): Promise<{ rows: Record<string, string | number>[] }> };
+export type Database = { query(sql: string, values?: unknown[]): Promise<{ rows: Record<string, string | number>[] }> };
 
 // Drive production pages through real Server Actions, SQL/RLS, cache and navigation.
 export async function checkWorkflow({ db, owner, wid, cid, homeId, uid, joinerId, pageFor, sessionFor, output, errors }: {
@@ -135,7 +135,7 @@ export async function checkWorkflow({ db, owner, wid, cid, homeId, uid, joinerId
   await member.locator('.filter-accordion > summary').click();
   await member.getByRole('button', { name: 'Додати тег Тег A 019', exact: true }).click();
   await member.getByRole('button', { name: 'Додати тег Тег B 019', exact: true }).click();
-  await member.locator('.donut-center strong').filter({ hasText: '250,00' }).waitFor();
+  await member.locator('.expense-chart-total strong').filter({ hasText: '250,00' }).waitFor();
   await member.getByRole('heading', { name: 'Серветки 019', exact: true }).waitFor();
   async function correct(price: string) {
     await member.getByRole('button', { name: 'Дії: Кава 019', exact: true }).click();
@@ -146,9 +146,9 @@ export async function checkWorkflow({ db, owner, wid, cid, homeId, uid, joinerId
     await modal.waitFor({ state: 'hidden' });
   }
   await correct('180');
-  await member.locator('.savings-summary').filter({ hasText: 'Економія: 30,00' }).waitFor();
+  await member.locator('.savings-summary .expense-difference').filter({ hasText: /Економія.*30,00/ }).waitFor();
   await correct('230');
-  await member.locator('.savings-summary').filter({ hasText: 'Перевитрата: 20,00' }).waitFor();
+  await member.locator('.savings-summary .expense-difference').filter({ hasText: /Перевитрата.*20,00/ }).waitFor();
   await expectSql('select count(*) n from public.expenses where workspace_id=$1 and planned_amount=210 and amount=230', 1, [wid]);
   await member.getByRole('button', { name: 'Дії: Серветки 019', exact: true }).click();
   member.once('dialog', popup => void popup.accept());

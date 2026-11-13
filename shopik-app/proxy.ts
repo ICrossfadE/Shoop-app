@@ -28,5 +28,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/expenses', '/tags', '/settings', '/login', '/invite/:path*', '/auth/:path*'],
+  // Background reads must persist rotated refresh tokens before route handlers run.
+  matcher: ['/', '/expenses', '/tags', '/settings', '/login', '/invite/:path*', '/auth/:path*', '/api/:path*'],
 };

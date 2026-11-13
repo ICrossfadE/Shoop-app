@@ -8,7 +8,9 @@ export async function GET(request: NextRequest) {
   const wid = request.nextUrl.searchParams.get('workspace');
   const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
   if (!isWorkspaceId(wid)) return reply({ error: 'Некоректний простір.' }, 400);
-  const client = await workspaceClient(wid);
+  let client;
+  try { client = await workspaceClient(wid); }
+  catch { return reply({ error: 'Не вдалося перевірити доступ. Повторіть спробу.' }, 503); }
   if (!client) return reply({ error: 'Немає доступу.' }, 403);
   const [categories, tags, theme, workspace] = await Promise.all([
     client.from('categories').select('*').eq('workspace_id', wid).order('created_at').order('id'),

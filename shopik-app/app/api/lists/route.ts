@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
   const tags = readTagFilter(p.getAll('tag'));
   const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
   if (!isWorkspaceId(wid) || !tags || (kind !== 'products' && kind !== 'expenses') || (kind === 'products' && !!category && !isWorkspaceId(category)) || (kind === 'expenses' && !isExpenseMonth(month))) return reply({ error: 'Некоректний фільтр.' }, 400);
-  const client = await workspaceClient(wid);
+  let client;
+  try { client = await workspaceClient(wid); }
+  catch { return reply({ error: 'Не вдалося перевірити доступ. Повторіть спробу.' }, 503); }
   if (!client) return reply({ error: 'Немає доступу.' }, 403);
   const { data, error } = await client.rpc('list_snapshot', { p_workspace_id: wid, p_kind: kind, p_category_id: kind === 'products' ? category || null : null, p_month: kind === 'expenses' ? month+'-01' : null, p_tag_ids: tags });
   if (error || !data) return reply({ error: 'Не вдалося завантажити дані.' }, error?.code === '42501' ? 403 : 503);

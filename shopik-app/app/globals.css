@@ -1,110 +1,6 @@
 @import "tailwindcss";
 
-/* Explicit account selection is the only theme source; system appearance cannot override it. */
-:root,
-:root[data-theme="light"] {
-  color-scheme: light;
-  --background: #f6f5f1;
-  --foreground: #2c2c2c;
-  --surface: #ffffff;
-  --soft: #eeefea;
-  --muted: #626a63;
-  --line: #888888;
-  --nav: #2c2c2c;
-  --link: #825000;
-  --danger: #b91c1c;
-  --danger-surface: #fef2f2;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --background: #171717;
-  --foreground: #f0f2eb;
-  --surface: #444444;
-  --soft: #171717;
-  --muted: #b8b8b8;
-  --line: #f0f2eb;
-  --nav: #f0f2eb;
-  --link: #ffc667;
-  --danger: #fca5a5;
-  --danger-surface: #421f28;
-}
-
-/* pink: semantic tokens leave tag and historical chart colors intact. */
-:root[data-theme="pink"] {
-  color-scheme: light;
-  --background: #fff0f5;
-  --foreground: #391c2b;
-  --surface: #fff8fb;
-  --soft: #f9dce9;
-  --muted: #775363;
-  --line: #a36b84;
-  --link: #922957;
-  --accent: #ad245f;
-  --accent-end: #c03473;
-  --on-accent: #ffffff;
-  --divider: #ecc5d7;
-  --nav: var(--foreground);
-  --neutral: var(--accent);
-  --on-neutral: var(--on-accent);
-}
-
-/* light-blue: semantic tokens leave tag and historical chart colors intact. */
-:root[data-theme="light-blue"] {
-  color-scheme: light;
-  --background: #f5f7fa;
-  --foreground: #202f40;
-  --surface: #ffffff;
-  --soft: #e5eef8;
-  --muted: #53657a;
-  --line: #71849a;
-  --link: #185b9c;
-  --accent: #185b9c;
-  --accent-end: #226bae;
-  --on-accent: #ffffff;
-  --divider: #d7e2ee;
-  --nav: var(--foreground);
-  --neutral: var(--accent);
-  --on-neutral: var(--on-accent);
-}
-
-/* light-green: semantic tokens leave tag and historical chart colors intact. */
-:root[data-theme="light-green"] {
-  color-scheme: light;
-  --background: #f5f7f5;
-  --foreground: #20352a;
-  --surface: #ffffff;
-  --soft: #e4efe7;
-  --muted: #536b5b;
-  --line: #718a79;
-  --link: #22633d;
-  --accent: #22633d;
-  --accent-end: #2e754a;
-  --on-accent: #ffffff;
-  --divider: #d5e4d9;
-  --nav: var(--foreground);
-  --neutral: var(--accent);
-  --on-neutral: var(--on-accent);
-}
-
-/* light-pink: semantic tokens leave tag and historical chart colors intact. */
-:root[data-theme="light-pink"] {
-  color-scheme: light;
-  --background: #f8f6f7;
-  --foreground: #382632;
-  --surface: #ffffff;
-  --soft: #f6e7ef;
-  --muted: #715b67;
-  --line: #987689;
-  --link: #963060;
-  --accent: #963060;
-  --accent-end: #ad3b72;
-  --on-accent: #ffffff;
-  --divider: #eadce3;
-  --nav: var(--foreground);
-  --neutral: var(--accent);
-  --on-neutral: var(--on-accent);
-}
+@import "../lib/domain/theme-palette.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -336,16 +232,6 @@
   width: 100%;
   height: 280px;
   min-width: 0;
-}
-.donut-center {
-  position: absolute;
-  inset: 32% 23%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-  pointer-events: none;
-  overflow-wrap: anywhere;
 }
 @media (max-width: 767px) {
   .header-inner {
@@ -1301,10 +1187,6 @@ details[open] > summary > .accordion-chevron,
   border-radius: 14px;
   padding: 12px;
 }
-.expense-plan {
-  padding: 4px 10px 10px;
-  overflow-wrap: anywhere;
-}
 /* Intrinsic chart/input sizes must never widen the document or trigger focus zoom. */
 .expense-layout,
 .shopping-content,
@@ -1340,5 +1222,277 @@ details[open] > summary > .accordion-chevron,
   .selectable-product .compact-end {
     justify-content: flex-end;
     max-width: 100%;
+  }
+}
+
+/* Task 031: soft surfaces share theme-aware depth instead of heavy outlines. */
+:root,
+:root[data-theme] {
+  --line: color-mix(in srgb, var(--foreground) 18%, var(--surface));
+  --divider: color-mix(in srgb, var(--foreground) 9%, var(--surface));
+  --panel-shadow: 0 6px 28px color-mix(in srgb, var(--foreground) 5%, transparent);
+  --saving: #176b3a;
+  --saving-surface: #edf8f0;
+  --overrun-surface: #fff1ef;
+}
+:root[data-theme="light"] {
+  --background: #f5f6fa;
+  --soft: #edf0f6;
+}
+:root[data-theme="dark"] {
+  --background: #181c22;
+  --surface: #252b33;
+  --soft: #303843;
+  --muted: #bbc4cf;
+  --panel-shadow: 0 6px 28px #0002;
+  --saving: #8ce5ac;
+  --saving-surface: #203d30;
+  --overrun-surface: #452d34;
+}
+.settings-grid > section,
+.expense-summary,
+.savings-summary,
+.category-accordion,
+.filter-accordion,
+.category-total,
+.login-card {
+  border: 0;
+  border-radius: 24px;
+  box-shadow: var(--panel-shadow);
+  background: var(--surface);
+}
+.settings-grid > section,
+.savings-summary {
+  padding: clamp(18px, 3vw, 28px);
+}
+.settings-grid {
+  gap: 20px;
+}
+.settings-grid h2 {
+  letter-spacing: -0.025em;
+}
+.settings-grid > section > form,
+.settings-grid fieldset {
+  border-color: var(--divider);
+}
+.product-cards > .compact-product,
+.product-row.compact-product,
+.compact-product {
+  border-color: transparent;
+  border-radius: 18px;
+  padding: 12px;
+  /* Subtle dark tint preserves the surface color across themes. */
+  background: color-mix(in srgb, color-mix(in srgb, var(--background) 65%, var(--surface)) 97%, black);
+}
+.product-cards {
+  gap: 8px;
+}
+.category-panel {
+  padding: 8px;
+  border-top: 0;
+}
+.icon-action {
+  border-color: transparent;
+  background: var(--soft);
+}
+.app-header,
+.shopping-total {
+  border-color: transparent;
+  box-shadow: var(--panel-shadow);
+}
+.login-card {
+  padding: clamp(20px, 5vw, 32px);
+}
+.login-shared {
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--soft) 65%, var(--surface));
+}
+.login-shared-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  font-weight: 600;
+}
+.login-shared-toggle > span {
+  flex: 1;
+}
+.login-shared-toggle[aria-expanded="true"] > .accordion-chevron {
+  rotate: 180deg;
+}
+.login-shared-panel {
+  padding: 0 14px 16px;
+}
+/* Keep the amount in normal flow; no overlay can collide with the chart. */
+.expense-chart-overview {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+.expense-chart-total {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  max-width: 100%;
+  min-width: 0;
+}
+.expense-chart-total > strong {
+  font-size: clamp(1.5rem, 4vw, 2.125rem);
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.expense-summary .donut {
+  max-width: 280px;
+  height: auto;
+  aspect-ratio: 1;
+}
+.expense-main .product-rows {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  gap: 14px;
+}
+.expense-main .product-rows > li,
+.expense-main .product-rows > li + li {
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 6px;
+  box-shadow: var(--panel-shadow);
+  container-type: inline-size;
+}
+/* Financial status always has a text equivalent in the comparison below it. */
+.product-price[data-tone="saving"],
+[data-tone="saving"] .expense-difference dd {
+  color: var(--saving);
+}
+.product-price[data-tone="overrun"],
+[data-tone="overrun"] .expense-difference dd {
+  color: var(--danger);
+}
+.expense-row .product-price {
+  font-size: 1.0625rem;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 8px;
+}
+.expense-row .product-price[data-tone="saving"] {
+  background: var(--saving-surface);
+}
+.expense-row .product-price[data-tone="overrun"] {
+  background: var(--overrun-surface);
+}
+.expense-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+.expense-comparison > div {
+  min-width: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--soft) 60%, var(--surface));
+  padding: 10px;
+}
+.expense-comparison dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.expense-comparison dd {
+  margin-top: 5px;
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.savings-summary .expense-comparison {
+  padding: 16px 0 0;
+}
+.savings-summary {
+  container-type: inline-size;
+}
+.savings-summary .expense-comparison dd {
+  font-size: clamp(1.125rem, 2vw, 1.5rem);
+}
+.expense-comparison-empty {
+  padding: 10px;
+}
+/* Stack metrics by available card width, including narrow desktop columns. */
+@container (max-width: 420px) {
+  .expense-comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .expense-comparison > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 10px;
+  }
+  .expense-comparison dd {
+    margin-top: 0;
+  }
+}
+
+/* Purchase details and price stay above a compact, softly filled comparison footer. */
+.expense-row.compact-product {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+.expense-row .compact-end {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+.product-amount {
+  min-width: 0;
+}
+.expense-row .product-price {
+  max-width: 100%;
+  padding: 8px 0 4px;
+  text-align: right;
+  background: transparent;
+}
+.expense-row .product-price[data-tone] {
+  background: transparent;
+}
+.expense-main .product-rows .expense-comparison--compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px 10px 10px;
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+.expense-main .product-rows .expense-comparison--compact > div {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--soft) 60%, var(--surface));
+}
+.expense-main .product-rows .expense-comparison--compact dt {
+  font-size: inherit;
+}
+.expense-main .product-rows .expense-comparison--compact dd {
+  margin: 0 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+@container (max-width: 420px) {
+  .expense-main .product-rows .expense-comparison--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container (min-width: 600px) {
+  .expense-row.compact-product {
+    grid-template-columns: minmax(0, 1fr) 260px;
   }
 }

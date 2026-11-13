@@ -18,6 +18,7 @@ type Props = {
   onStatus: () => void;
   onDelete: () => void;
   expense?: boolean;
+  priceTone?: 'saving' | 'overrun' | 'neutral';
 };
 
 // Present one persisted product and its explicit edit, completion and delete actions.
@@ -30,6 +31,7 @@ export default function OrderCard({
   onStatus,
   onDelete,
   expense = false,
+  priceTone = 'neutral',
 }: Props) {
   const completed = product.status === "completed";
   const [open, setOpen] = useState(false);
@@ -174,9 +176,11 @@ export default function OrderCard({
       </div>
       {/* Wrapping actions preserve usable buttons on mobile. */}
       <div className="product-end compact-end">
-        <p className="product-price">
+        <div className="product-amount">
+        <p className="product-price" data-tone={priceTone}>
           <AnimatedNumber value={productTotal(product)} />{" "}
         </p>
+        </div>
         <div className="compact-actions">
           {!completed && (
             <button
