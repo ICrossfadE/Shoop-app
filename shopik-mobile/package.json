@@ -1,0 +1,42 @@
+{
+  "name": "shopik-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "lint": "node ../shopik-app/node_modules/eslint/bin/eslint.js --max-warnings 0 src tests scripts *.ts",
+    "typecheck:domain": "tsc -p tsconfig.domain.json",
+    "typecheck": "npm run typecheck:domain && tsc --noEmit",
+    "test": "node --test tests/*.test.ts",
+    "build": "npm run typecheck && vite build && node scripts/check-bundle.mts",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:debug": "npm run android:sync && node scripts/gradle.mts assembleDebug",
+    "android:release": "npm run android:sync && node scripts/gradle.mts assembleRelease",
+    "check": "npm run test && npm run build",
+    "test:indexeddb": "node scripts/check-indexeddb.mts"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.1",
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.0",
+    "@supabase/supabase-js": "2.119.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.7",
+    "typescript": "5.9.3",
+    "vite": "8.3.6"
+  }
+}

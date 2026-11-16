@@ -2,7 +2,7 @@ import type { Account } from './identity';
 import type { Category } from './categories';
 import type { Tag } from './tags';
 import type { Theme } from './theme';
-import type { ListData, ListFilter } from './list-model';
+import type { ListData, ListFilter } from './domain/list-model';
 export type Screen = 'products' | 'expenses' | 'settings';
 export type WorkspaceBoot = {
   revokedWorkspaceId?: string;

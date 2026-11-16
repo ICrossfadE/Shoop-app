@@ -45,13 +45,13 @@ export type Database = {
       preview_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
       accept_workspace_invite: { Args:{p_token:string};Returns:import('../invites').InviteView };
 
-      complete_products: { Args: { p_workspace_id: string; p_operation_id: string; p_items: { id: string; amount: number; updated_at: string }[] }; Returns: import('../list-model').MutationData };
+      complete_products: { Args: { p_workspace_id: string; p_operation_id: string; p_items: { id: string; amount: number; updated_at: string }[] }; Returns: import('../domain/list-model').MutationData };
       correct_expense_price: { Args: { p_workspace_id: string; p_expense_id: string; p_operation_id: string; p_amount: number; p_expected_amount: number }; Returns: number };
       workspace_people: { Args: { p_workspace_id: string }; Returns: import('../members').WorkspacePerson[] };
       remove_workspace_member: { Args: { p_workspace_id: string; p_user_id: string; p_joined_at: string }; Returns: undefined };
 
-      apply_operation: { Args: { p_workspace_id: string; p_operation_id: string; p_kind: string; p_payload: Record<string, unknown> }; Returns: import('../list-model').MutationData };
-      list_snapshot: { Args: { p_workspace_id: string; p_kind: string; p_category_id: string | null; p_month: string | null; p_tag_ids: string[] }; Returns: import('../list-model').ListData };
+      apply_operation: { Args: { p_workspace_id: string; p_operation_id: string; p_kind: string; p_payload: Record<string, unknown> }; Returns: import('../domain/list-model').MutationData };
+      list_snapshot: { Args: { p_workspace_id: string; p_kind: string; p_category_id: string | null; p_month: string | null; p_tag_ids: string[] }; Returns: import('../domain/list-model').ListData };
       product_authors_for_ids: { Args: { p_workspace_id: string; p_ids: string[] }; Returns: ProductAuthor[] };
       workspace_product_authors: { Args: { p_workspace_id: string }; Returns: ProductAuthor[] };
       save_product_tags: { Args: { p_workspace_id: string; p_product_id: string | null; p_name: string; p_description: string; p_price: number; p_category_id: string; p_tag_ids: string[] }; Returns: string };

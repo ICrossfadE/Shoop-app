@@ -1,0 +1,40 @@
+@import '../../shopik-app/lib/domain/theme-palette.css';
+
+/* Share the canonical web palette verbatim; shell geometry is Android-specific. */
+:root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; color: var(--foreground); background: var(--background); }
+button, select { font: inherit; border: 1px solid var(--foreground); border-radius: 14px; padding: 14px 18px; min-height: 48px; background: var(--foreground); color: var(--background); cursor: pointer; }
+button.secondary, select { color: var(--foreground); background: var(--surface); border-color: var(--line); }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid var(--link); outline-offset: 3px; }
+.app-shell { max-width: 720px; margin: auto; min-height: 100dvh; display: flex; flex-direction: column; padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; }
+.brand-dot { color: var(--link); }
+.badge { font-size: 12px; border: 1px solid var(--line); border-radius: 20px; padding: 7px 11px; }
+main { flex: 1; padding: 12px 0 24px; }
+main:focus { outline: none; }
+.connection, .eyebrow, .muted { color: var(--muted); }
+.connection, .eyebrow { font-size: 13px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(20px, 5vw, 40px); }
+.eyebrow { text-transform: uppercase; letter-spacing: 1px; }
+h1 { font-size: clamp(28px, 7vw, 40px); line-height: 1.15; letter-spacing: -1px; margin: 20px 0; overflow-wrap: anywhere; }
+h2 { font-size: 20px; }
+p { line-height: 1.6; overflow-wrap: anywhere; }
+label { display: block; font-weight: 600; margin: 16px 0 8px; }
+select { width: 100%; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.stored, .empty { border-radius: 16px; background: var(--soft); padding: 16px; }
+.notice { color: var(--foreground); background: var(--soft); padding: 16px; border-radius: 14px; }
+.error { color: var(--danger); background: var(--danger-surface); padding: 16px; border-radius: 14px; }
+nav { display: flex; gap: 8px; position: sticky; bottom: 0; background: var(--background); padding-top: 12px; }
+nav button { flex: 1; min-width: 0; padding: 12px 5px; font-size: clamp(11px, 3vw, 14px); }
+nav [aria-current="page"] { border-color: var(--link); color: var(--link); font-weight: 700; }
+.diagnostics { margin-top: 24px; }
+.diagnostics summary { cursor: pointer; padding: 16px 0; color: var(--muted); }
+.fallback { max-width: 600px; margin: 24px; }
+/* Native top-layer surfaces stay inside small, landscape and dark WebViews. */
+dialog, .popover { max-width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto; color: var(--foreground); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+dialog::backdrop { background: #0008; }
+@media (prefers-reduced-motion: no-preference) { button { transition: opacity .12s ease; } }

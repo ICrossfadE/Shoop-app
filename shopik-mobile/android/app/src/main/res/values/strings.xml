@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Shopik Prototype</string>
+    <string name="title_activity_main">Shopik Prototype</string>
+    <string name="package_name">ua.shopik.prototype</string>
+    <string name="custom_url_scheme">ua.shopik.prototype</string>
+</resources>

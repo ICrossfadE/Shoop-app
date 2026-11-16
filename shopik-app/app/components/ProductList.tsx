@@ -62,7 +62,11 @@ function CategorySection({
           aria-controls={panelId}
           onClick={() => setOpen(!open)}
         >
-          <IconChevronDown size={20} className="accordion-chevron" aria-hidden="true" />
+          <IconChevronDown
+            size={20}
+            className="accordion-chevron"
+            aria-hidden="true"
+          />
           <span className="category-name">{category.name}</span>
           <span className="category-sum">
             {ready ? <AnimatedNumber value={total} /> : "…"}
@@ -70,7 +74,7 @@ function CategorySection({
         </button>
         <button
           // className="icon-action category-add"
-          className="font-bold"
+          className="font-bold w-6 h-6"
           aria-label={"Додати товар у категорію " + category.name}
           onClick={(event) =>
             window.dispatchEvent(
